@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "serial-job-applier"
+version = "0.1.0"
+description = ""
+authors = ["Joan Canossa <jfcpersonal99@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12,<3.13"
+langgraph = "^0.6.7"
+langchain = "^0.3.27"
+langchain-community = "^0.3.29"
+fastmcp = "^2.12.3"
+mcp = "^1.0.0"
+selenium = "^4.15.0"
+beautifulsoup4 = "^4.12.0"
+requests = "^2.31.0"
+webdriver-manager = "^4.0.0"
+undetected-chromedriver = "^3.5.0"
+lxml = "^4.9.0"
+fake-useragent = "^1.4.0"
+loguru = "^0.7.0"
+pypdf2 = "^3.0.0"
+pdfplumber = "^0.10.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.3.0"
+black = "^25.9.0"
+isort = "^6.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

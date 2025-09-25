@@ -1,0 +1,51 @@
+# Core Agent Dockerfile (includes MCP server via stdio)
+FROM python:3.12-slim
+
+# Install system dependencies for Selenium, Chrome, PDF processing and AI models
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    wget \
+    gnupg \
+    unzip \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Install Poetry
+RUN pip install poetry
+
+# Configure Poetry
+RUN poetry config virtualenvs.create false
+
+# Install dependencies
+RUN poetry install --only=main
+
+# Copy all source code (both core agent and MCP server)
+COPY src/ ./src/
+COPY mcp/ ./mcp/
+
+# Create necessary directories
+RUN mkdir -p /app/data /tmp/chrome-data && chmod 755 /tmp/chrome-data
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV MCP_SERVER_PATH=python
+ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV CHROME_PATH=/usr/bin/google-chrome
+
+# Start Xvfb and run the core agent
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 & python src/main.py"]

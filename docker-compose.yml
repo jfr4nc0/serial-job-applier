@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # Core Job Application Agent (now includes MCP server internally via stdio)
+  core-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: core-agent
+    environment:
+      - PYTHONPATH=/app
+      - MCP_SERVER_PATH=python
+      - LINKEDIN_EMAIL=${LINKEDIN_EMAIL}
+      - LINKEDIN_PASSWORD=${LINKEDIN_PASSWORD}
+      - CV_FILE_PATH=/app/data/cv.pdf
+    volumes:
+      # Mount for CV files and output
+      - ./data:/app/data
+      # Mount for browser data persistence
+      - browser-data:/tmp/chrome-data
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+        reservations:
+          memory: 3G
+
+volumes:
+  browser-data:
