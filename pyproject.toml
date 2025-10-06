@@ -1,9 +1,13 @@
 [tool.poetry]
 name = "serial-job-applier"
 version = "0.1.0"
-description = ""
+description = "LinkedIn Job Application Automation System"
 authors = ["Joan Canossa <jfcpersonal99@gmail.com>"]
 readme = "README.md"
+packages = [
+    {include = "src"},
+    {include = "linkedin_mcp"}
+]
 
 [tool.poetry.dependencies]
 python = "^3.12,<3.13"
@@ -22,6 +26,7 @@ fake-useragent = "^1.4.0"
 loguru = "^0.7.0"
 pypdf2 = "^3.0.0"
 pdfplumber = "^0.10.0"
+langchain-huggingface = "^0.3.1"
 
 
 [tool.poetry.group.dev.dependencies]

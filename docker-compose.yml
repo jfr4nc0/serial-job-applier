@@ -1,29 +1,58 @@
 version: '3.8'
 
 services:
-  # Core Job Application Agent (now includes MCP server internally via stdio)
+  # LinkedIn MCP Server (handles LinkedIn automation and browser interactions)
+  linkedin-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp-server
+    container_name: linkedin-mcp-server
+    environment:
+      - PYTHONPATH=/app
+      - DISPLAY=:99
+      - CHROME_BIN=/usr/bin/google-chrome
+      - CHROME_PATH=/usr/bin/google-chrome
+      - LINKEDIN_EMAIL=${LINKEDIN_EMAIL}
+      - LINKEDIN_PASSWORD=${LINKEDIN_PASSWORD}
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=3000
+    volumes:
+      # Mount for browser data persistence
+      - browser-data:/tmp/chrome-data
+    ports:
+      - "3000:3000"  # Expose MCP server port for potential external access
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  # Core Job Application Agent (orchestrates the workflow and communicates with MCP server)
   core-agent:
     build:
       context: .
       dockerfile: Dockerfile.agent
     container_name: core-agent
+    depends_on:
+      - linkedin-mcp-server
     environment:
       - PYTHONPATH=/app
-      - MCP_SERVER_PATH=python
+      - MCP_SERVER_HOST=linkedin-mcp-server
+      - MCP_SERVER_PORT=3000
       - LINKEDIN_EMAIL=${LINKEDIN_EMAIL}
       - LINKEDIN_PASSWORD=${LINKEDIN_PASSWORD}
       - CV_FILE_PATH=/app/data/cv.pdf
+      - HUGGING_FACE_HUB_TOKEN=${HUGGING_FACE_HUB_TOKEN}
     volumes:
       # Mount for CV files and output
       - ./data:/app/data
-      # Mount for browser data persistence
-      - browser-data:/tmp/chrome-data
     deploy:
       resources:
         limits:
-          memory: 6G
+          memory: 2G
         reservations:
-          memory: 3G
+          memory: 1G
 
 volumes:
   browser-data:

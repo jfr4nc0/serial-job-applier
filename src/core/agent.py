@@ -1,13 +1,11 @@
 from typing import Any, Dict, List
 
-from langchain_core.runnables import RunnableConfig
-from langgraph import END, StateGraph
+from langgraph.graph import END, StateGraph
 
-from src.core.mcp_client import LinkedInMCPClientSync
-from src.core.tools import analyze_cv_structure, read_pdf_cv
-from src.core.types import (
+from src.providers import LinkedInMCPClientSync, get_llm_client
+from src.tools import analyze_cv_structure, read_pdf_cv
+from src.types import (
     ApplicationRequest,
-    ApplicationResult,
     JobApplicationAgentState,
     JobResult,
     JobSearchRequest,
@@ -23,13 +21,9 @@ class JobApplicationAgent:
     4. Apply to filtered jobs
     """
 
-    def __init__(
-        self, mcp_server_path: str = "python", mcp_server_args: List[str] = None
-    ):
-        if mcp_server_args is None:
-            mcp_server_args = ["-m", "mcp.linkedin.linkedin_server"]
-        self.mcp_server_path = mcp_server_path
-        self.mcp_server_args = mcp_server_args
+    def __init__(self, server_host: str = None, server_port: int = None):
+        self.server_host = server_host
+        self.server_port = server_port
         self.graph = self._build_graph()
 
     def _build_graph(self) -> StateGraph:
@@ -81,9 +75,7 @@ class JobApplicationAgent:
         current_index = 0
 
         try:
-            mcp_client = LinkedInMCPClientSync(
-                self.mcp_server_path, self.mcp_server_args
-            )
+            mcp_client = LinkedInMCPClientSync(self.server_host, self.server_port)
 
             for search_request in state["job_searches"]:
                 try:
@@ -123,11 +115,10 @@ class JobApplicationAgent:
     def filter_jobs_node(self, state: JobApplicationAgentState) -> Dict[str, Any]:
         """Filter jobs based on CV alignment using AI analysis."""
         try:
-            from langchain_community.chat_models import ChatOllama
             from langchain_core.prompts import ChatPromptTemplate
 
-            # Initialize the model for job filtering
-            model = ChatOllama(model="qwen2.5:32b", temperature=0.1)
+            # Initialize the LLM model for job filtering
+            model = get_llm_client()
 
             # Create filtering prompt
             filter_prompt = ChatPromptTemplate.from_template(
@@ -230,9 +221,7 @@ class JobApplicationAgent:
                 }
 
             # Call LinkedIn MCP easy_apply_for_jobs tool
-            mcp_client = LinkedInMCPClientSync(
-                self.mcp_server_path, self.mcp_server_args
-            )
+            mcp_client = LinkedInMCPClientSync(self.server_host, self.server_port)
             application_results = mcp_client.easy_apply_for_jobs(
                 applications=applications,
                 cv_analysis=state["cv_analysis"],

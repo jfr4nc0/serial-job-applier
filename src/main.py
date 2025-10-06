@@ -8,16 +8,15 @@ import os
 import sys
 from typing import List
 
-from src.core.agent import JobApplicationAgent
-from src.core.types import JobSearchRequest
+from src import JobApplicationAgent, JobSearchRequest
 
 
 def main():
     """Example usage of the JobApplicationAgent."""
 
     # Configuration
-    mcp_server_path = os.getenv("MCP_SERVER_PATH", "python")
-    mcp_server_args = ["-m", "mcp.linkedin.linkedin_server"]
+    mcp_server_host = os.getenv("MCP_SERVER_HOST", "localhost")
+    mcp_server_port = int(os.getenv("MCP_SERVER_PORT", "3000"))
 
     # Example job search requests
     job_searches: List[JobSearchRequest] = [
@@ -55,15 +54,15 @@ def main():
         sys.exit(1)
 
     print("Starting LinkedIn Job Application Agent...")
-    print(f"MCP Server Path: {mcp_server_path}")
-    print(f"MCP Server Args: {' '.join(mcp_server_args)}")
+    print(f"MCP Server Host: {mcp_server_host}")
+    print(f"MCP Server Port: {mcp_server_port}")
     print(f"CV File: {cv_file_path}")
     print(f"Job Searches: {len(job_searches)} searches configured")
 
     try:
         # Initialize the agent
         agent = JobApplicationAgent(
-            mcp_server_path=mcp_server_path, mcp_server_args=mcp_server_args
+            server_host=mcp_server_host, server_port=mcp_server_port
         )
 
         # Run the complete workflow

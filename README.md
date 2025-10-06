@@ -4,7 +4,7 @@ A comprehensive AI-powered system for automating LinkedIn job applications using
 
 ## Architecture
 
-The system uses the **official MCP SDK** with stdio transport for proper protocol compliance:
+The system uses a **single-container architecture** with Hugging Face Serverless API for cloud-based AI inference:
 
 ### Core Job Application Agent (`core-agent` container)
 - **MCP Client**: Uses official `mcp` SDK with stdio transport for protocol communication
@@ -13,7 +13,13 @@ The system uses the **official MCP SDK** with stdio transport for proper protoco
 - **CV Analysis**: AI-powered PDF CV reading and structured data extraction
 - **Job Filtering**: Intelligent job matching based on CV profile alignment
 - **RPA Automation**: Selenium-based LinkedIn interaction with anti-detection
-- **AI Form Filling**: Uses Qwen2.5-32B model for intelligent form completion
+- **AI Form Filling**: Uses Hugging Face Serverless API for intelligent form completion
+
+### AI Inference
+- **Hugging Face Serverless API**: Cloud-based inference with Qwen3-30B-A3B-Thinking
+- **No GPU Required**: Serverless inference eliminates infrastructure complexity
+- **Scalable**: Automatic scaling and high availability
+- **Cost Effective**: Pay-per-use pricing model
 
 ## Features
 
@@ -31,6 +37,7 @@ The system uses the **official MCP SDK** with stdio transport for proper protoco
 - Docker and Docker Compose
 - LinkedIn account credentials
 - PDF CV file
+- Hugging Face account and API token (for serverless inference)
 
 ### 1. Clone and Setup
 ```bash
@@ -44,7 +51,7 @@ Create `.env` file:
 LINKEDIN_EMAIL=your-email@example.com
 LINKEDIN_PASSWORD=your-password
 CV_FILE_PATH=/app/data/cv.pdf
-MCP_SERVER_URL=http://linkedin-mcp:8000
+HUGGING_FACE_HUB_TOKEN=your-hf-token-here
 ```
 
 ### 3. Prepare CV File
@@ -55,10 +62,10 @@ cp /path/to/your/cv.pdf data/cv.pdf
 
 ### 4. Start the System
 ```bash
-# Build and start the agent
+# Build and start the core agent
 docker-compose up -d
 
-# Check logs
+# Check core agent logs
 docker-compose logs -f core-agent
 ```
 
@@ -77,7 +84,8 @@ docker-compose logs -f core-agent
 - **`BrowserManager`**: Selenium automation with anti-detection
 
 ### AI Models
-- **Qwen2.5-32B**: Used for CV analysis and form question answering
+- **Qwen3-30B-A3B-Thinking**: Advanced reasoning model via Hugging Face Serverless API
+- **Serverless Inference**: Cloud-based high-performance inference
 - **PDF Processing**: PyPDF2 and pdfplumber for CV text extraction
 
 ## Workflow
@@ -92,9 +100,9 @@ docker-compose logs -f core-agent
 
 - **Core**: Python 3.12, LangGraph, LangChain, FastMCP
 - **RPA**: Selenium, undetected-chromedriver, BeautifulSoup4
-- **AI**: ChatOllama (Qwen2.5-32B model)
+- **AI**: Hugging Face Serverless API (Qwen3-30B-A3B-Thinking), LangChain-HuggingFace
 - **PDF**: PyPDF2, pdfplumber
-- **HTTP**: httpx, requests
+- **Infrastructure**: Docker
 
 ## License
 
