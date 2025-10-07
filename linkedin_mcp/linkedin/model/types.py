@@ -24,12 +24,8 @@ class ApplicationResult(TypedDict):
 
 
 class JobResult(TypedDict):
-    job_id: str
-    title: str
-    company: str
-    location: str
-    description: str
-    easy_apply: bool
+    id_job: int
+    job_description: str
 
 
 class AuthState(TypedDict):

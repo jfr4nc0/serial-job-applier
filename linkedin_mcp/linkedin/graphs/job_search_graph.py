@@ -106,6 +106,13 @@ class JobSearchGraph:
 
             for card in job_cards:
                 try:
+                    # Scroll the card into view to ensure it's clickable
+                    driver.execute_script(
+                        "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
+                        card,
+                    )
+                    state["browser_manager"].random_delay(0.5, 1)
+
                     # Extract job ID from data-job-id attribute
                     job_id = card.get_attribute("data-occludable-job-id")
 
@@ -115,6 +122,14 @@ class JobSearchGraph:
                     # Extract job description by clicking on the job link
                     try:
                         href_element = card.find_element(By.CSS_SELECTOR, "[href]")
+
+                        # Ensure the href element is also in view and clickable
+                        driver.execute_script(
+                            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
+                            href_element,
+                        )
+                        state["browser_manager"].random_delay(0.5, 1)
+
                         href_element.click()
                         state["browser_manager"].random_delay(1, 2)
 
@@ -128,16 +143,16 @@ class JobSearchGraph:
                                 job_description_element
                             )
                         except NoSuchElementException:
-                            job_description = "No description available"
+                            continue
 
                     except NoSuchElementException:
-                        job_description = "No description available"
+                        continue
 
                     # Only collect jobs if we haven't reached the limit
                     if len(state["collected_jobs"]) + len(page_jobs) < state["limit"]:
                         page_jobs.append(
                             JobResult(
-                                id_job=job_id,
+                                id_job=int(job_id),
                                 job_description=job_description,
                             )
                         )
