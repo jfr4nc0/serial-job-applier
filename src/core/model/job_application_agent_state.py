@@ -28,3 +28,6 @@ class JobApplicationAgentState(TypedDict):
     total_jobs_found: int
     total_jobs_applied: int
     current_status: str
+
+    # Observability
+    trace_id: str  # UUID for tracing this workflow execution

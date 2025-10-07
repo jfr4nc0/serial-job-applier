@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -15,6 +16,11 @@ from rich.console import Console
 from cli.config import CLIConfig, JobSearchConfig
 from cli.ui import TerminalUI
 from src.core.agent import JobApplicationAgent
+from src.core.utils.logging_config import (
+    configure_core_agent_logging,
+    log_core_agent_completion,
+    log_core_agent_startup,
+)
 
 
 class JobApplicationCLI:
@@ -23,6 +29,9 @@ class JobApplicationCLI:
     def __init__(self):
         # Load .env file if it exists
         load_dotenv()
+
+        # Configure core agent logging
+        configure_core_agent_logging()
 
         self.app = typer.Typer(
             name="job-applier",

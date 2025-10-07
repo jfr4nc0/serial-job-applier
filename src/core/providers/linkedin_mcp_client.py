@@ -86,6 +86,7 @@ class LinkedInMCPClient:
         email: str,
         password: str,
         limit: int = 50,
+        trace_id: str = None,
     ) -> List[JobResult]:
         """
         Search for jobs on LinkedIn via MCP protocol.
@@ -110,6 +111,10 @@ class LinkedInMCPClient:
             "limit": limit,
         }
 
+        # Add trace_id if provided
+        if trace_id:
+            arguments["trace_id"] = trace_id
+
         result = await self._call_tool("search_jobs", arguments)
 
         # Parse JSON result if it's a string
@@ -130,6 +135,7 @@ class LinkedInMCPClient:
         cv_analysis: CVAnalysis,
         email: str,
         password: str,
+        trace_id: str = None,
     ) -> List[ApplicationResult]:
         """
         Apply to multiple jobs using LinkedIn's easy apply via MCP protocol.
@@ -166,6 +172,10 @@ class LinkedInMCPClient:
             "email": email,
             "password": password,
         }
+
+        # Add trace_id if provided
+        if trace_id:
+            arguments["trace_id"] = trace_id
 
         result = await self._call_tool("easy_apply_for_jobs", arguments)
 

@@ -15,8 +15,27 @@ from linkedin_mcp.linkedin.model.types import (
 )
 from linkedin_mcp.linkedin.services.job_application_service import JobApplicationService
 from linkedin_mcp.linkedin.services.job_search_service import JobSearchService
+from linkedin_mcp.linkedin.utils.logging_config import (
+    configure_mcp_logging,
+    log_mcp_server_startup,
+    log_mcp_tool_registration,
+)
+
+# Configure logging for LinkedIn MCP server
+configure_mcp_logging()
 
 mcp = FastMCP("LinkedIn Job Applier")
+
+# Log server startup
+log_mcp_server_startup(
+    {
+        "name": "LinkedIn Job Applier",
+        "version": "1.16.0",
+        "transport": "stdio",
+        "fastmcp_version": "2.12.4",
+        "mcp_sdk_version": "1.16.0",
+    }
+)
 
 # Initialize services
 job_search_service = JobSearchService()
@@ -75,6 +94,18 @@ def easy_apply_for_jobs(
     return job_application_service.apply_to_jobs(
         applications, cv_analysis, {"email": email, "password": password}
     )
+
+
+# Log registered tools
+log_mcp_tool_registration(
+    [
+        {"name": "search_jobs", "description": "Search LinkedIn jobs with filters"},
+        {
+            "name": "easy_apply_for_jobs",
+            "description": "Apply to jobs using Easy Apply with AI form handling",
+        },
+    ]
+)
 
 
 if __name__ == "__main__":

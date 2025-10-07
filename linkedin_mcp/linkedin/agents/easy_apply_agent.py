@@ -1,7 +1,9 @@
+import uuid
 from typing import Any, Dict, List
 
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import END, StateGraph
+from loguru import logger
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -10,6 +12,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from linkedin_mcp.linkedin.interfaces.agents import IJobApplicationAgent
 from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
 from linkedin_mcp.linkedin.model.types import ApplicationRequest, CVAnalysis
+from linkedin_mcp.linkedin.observability.langfuse_config import (
+    get_langfuse_config_for_mcp_langgraph,
+    trace_mcp_operation,
+)
 from linkedin_mcp.linkedin.providers.llm_client import get_llm_client
 
 
@@ -25,6 +31,7 @@ class EasyApplyState(Dict):
     form_answers: Dict[str, Any]
     success: bool
     error: str
+    trace_id: str  # UUID for tracing this application attempt
 
 
 class EasyApplyAgent(IJobApplicationAgent):
@@ -513,6 +520,7 @@ class EasyApplyAgent(IJobApplicationAgent):
         # Fallback to first option if no match
         return options[0] if options else ""
 
+    @trace_mcp_operation("apply_to_job")
     def apply_to_job(
         self,
         job_id: str,
@@ -532,6 +540,20 @@ class EasyApplyAgent(IJobApplicationAgent):
         Returns:
             Dict with job_id, success status, and optional error message
         """
+        trace_id = str(uuid.uuid4())
+
+        logger.info(
+            "Starting Easy Apply job application",
+            trace_id=trace_id,
+            job_id=job_id,
+            monthly_salary=application_request.get("monthly_salary", 0),
+            skills_count=(
+                len(cv_analysis.get("skills", []))
+                if isinstance(cv_analysis, dict)
+                else "unknown"
+            ),
+        )
+
         initial_state = EasyApplyState(
             job_id=job_id,
             monthly_salary=application_request.monthly_salary,
@@ -542,6 +564,7 @@ class EasyApplyAgent(IJobApplicationAgent):
             form_answers={},
             success=False,
             error="",
+            trace_id=trace_id,
         )
 
         try:

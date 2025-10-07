@@ -1,4 +1,7 @@
+import uuid
 from typing import Dict, List
+
+from loguru import logger
 
 from linkedin_mcp.linkedin.agents.easy_apply_agent import EasyApplyAgent
 from linkedin_mcp.linkedin.graphs.job_application_graph import JobApplicationGraph
@@ -8,6 +11,7 @@ from linkedin_mcp.linkedin.model.types import (
     ApplicationResult,
     CVAnalysis,
 )
+from linkedin_mcp.linkedin.observability.langfuse_config import create_mcp_trace
 from linkedin_mcp.linkedin.services.browser_manager_service import (
     BrowserManagerService as BrowserManager,
 )
@@ -46,18 +50,43 @@ class JobApplicationService(IJobApplicationService):
         Returns:
             List of application results with id_job, success status, and optional error message
         """
+        # Create main trace for this job application workflow
+        trace_id = str(uuid.uuid4())
+
+        # Create Langfuse trace for full workflow
+        langfuse_trace = create_mcp_trace(
+            name="linkedin_job_application_workflow",
+            trace_id=trace_id,
+            metadata={
+                "applications_count": len(applications),
+                "email": user_credentials.get("email", "unknown"),
+                "workflow_type": "job_application",
+            },
+        )
+
+        logger.info(
+            "Starting LinkedIn job application workflow",
+            trace_id=trace_id,
+            applications_count=len(applications),
+            email=user_credentials.get("email", "unknown"),
+        )
+
         # Extract credentials
         email = user_credentials.get("email")
         password = user_credentials.get("password")
 
         if not email or not password:
-            raise ValueError("Email and password are required in user_credentials")
+            error_msg = "Email and password are required in user_credentials"
+            logger.error("Invalid credentials", trace_id=trace_id, error=error_msg)
+            raise ValueError(error_msg)
 
         try:
             # Step 1: Initialize browser (use injected dependency)
+            logger.info("Initializing browser", trace_id=trace_id)
             self.browser_manager.start_browser()
 
             # Step 2: Authenticate with LinkedIn
+            logger.info("Authenticating with LinkedIn", trace_id=trace_id, email=email)
             auth_result = self.auth_service.authenticate(
                 email, password, self.browser_manager
             )
@@ -68,8 +97,9 @@ class JobApplicationService(IJobApplicationService):
                 )
 
             # Step 3: Execute job application workflow with AI form handling
+            logger.info("Starting job application graph execution", trace_id=trace_id)
             raw_results = self.application_graph.execute(
-                applications, cv_analysis, self.browser_manager
+                applications, cv_analysis, self.browser_manager, trace_id=trace_id
             )
 
             # Step 4: Convert to ApplicationResult format

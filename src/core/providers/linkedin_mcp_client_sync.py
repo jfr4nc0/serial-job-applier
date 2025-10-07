@@ -26,13 +26,14 @@ class LinkedInMCPClientSync:
         email: str,
         password: str,
         limit: int = 50,
+        trace_id: str = None,
     ) -> List[JobResult]:
         """Synchronous wrapper for search_jobs."""
 
         async def _search():
             async with self.client as client:
                 return await client.search_jobs(
-                    job_title, location, easy_apply, email, password, limit
+                    job_title, location, easy_apply, email, password, limit, trace_id
                 )
 
         return asyncio.run(_search())
@@ -43,13 +44,14 @@ class LinkedInMCPClientSync:
         cv_analysis: CVAnalysis,
         email: str,
         password: str,
+        trace_id: str = None,
     ) -> List[ApplicationResult]:
         """Synchronous wrapper for easy_apply_for_jobs."""
 
         async def _apply():
             async with self.client as client:
                 return await client.easy_apply_for_jobs(
-                    applications, cv_analysis, email, password
+                    applications, cv_analysis, email, password, trace_id
                 )
 
         return asyncio.run(_apply())
