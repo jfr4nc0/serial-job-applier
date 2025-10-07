@@ -60,16 +60,11 @@ class JobApplicationGraph:
         workflow.add_edge("process_application", "record_result")
         workflow.add_edge("record_result", "select_next_application")
 
-        # Compile with Langfuse observability if configured
-        langfuse_config = get_langfuse_config_for_mcp_langgraph()
-        if langfuse_config:
-            logger.info(
-                "JobApplicationGraph compiled with Langfuse observability enabled"
-            )
-            return workflow.compile(**langfuse_config)
-        else:
-            logger.debug("JobApplicationGraph compiled without observability")
-            return workflow.compile()
+        # Compile the graph - Langfuse observability is handled during invoke
+        logger.info(
+            "JobApplicationGraph compiled - observability handled during invoke"
+        )
+        return workflow.compile()
 
     def _initialize_agent(self, state: JobApplicationState) -> JobApplicationState:
         """Initialize the job application agent."""

@@ -34,77 +34,21 @@ class JobApplicationAgent:
         workflow = StateGraph(JobApplicationAgentState)
 
         # Add nodes
-        workflow.add_node("read_cv_node", self.read_cv_node)
         workflow.add_node("search_jobs_node", self.search_jobs_node)
         workflow.add_node("filter_jobs_node", self.filter_jobs_node)
         workflow.add_node("apply_to_jobs_node", self.apply_to_jobs_node)
 
         # Define the workflow flow
-        workflow.set_entry_point("read_cv_node")
-        workflow.add_edge("read_cv_node", "search_jobs_node")
+        workflow.set_entry_point("search_jobs_node")
         workflow.add_edge("search_jobs_node", "filter_jobs_node")
         workflow.add_edge("filter_jobs_node", "apply_to_jobs_node")
         workflow.add_edge("apply_to_jobs_node", END)
 
-        # Compile with Langfuse observability if configured
-        langfuse_config = get_langfuse_config_for_langgraph()
-        if langfuse_config:
-            logger.info("LangGraph compiled with Langfuse observability enabled")
-            return workflow.compile(**langfuse_config)
-        else:
-            logger.info("LangGraph compiled without observability")
-            return workflow.compile()
-
-    def read_cv_node(self, state: JobApplicationAgentState) -> Dict[str, Any]:
-        """Read and analyze the CV file."""
-        trace_id = state.get("trace_id", str(uuid.uuid4()))
-        cv_file_path = state.get("cv_file_path", "unknown")
-
-        # Use core agent logger with trace ID
-        agent_logger = get_core_agent_logger(trace_id)
-
-        try:
-            agent_logger.info("Starting CV analysis", cv_file_path=cv_file_path)
-
-            # Extract text from PDF
-            cv_content = read_pdf_cv.invoke({"file_path": state["cv_file_path"]})
-
-            # Analyze CV structure with AI
-            cv_analysis = analyze_cv_structure.invoke({"cv_text": cv_content})
-
-            agent_logger.info(
-                "CV analysis completed successfully",
-                cv_content_length=len(cv_content) if cv_content else 0,
-                skills_found=(
-                    len(cv_analysis.get("skills", []))
-                    if isinstance(cv_analysis, dict)
-                    else "unknown"
-                ),
-            )
-
-            return {
-                **state,
-                "trace_id": trace_id,
-                "cv_content": cv_content,
-                "cv_analysis": cv_analysis,
-                "current_status": "CV analyzed successfully",
-            }
-
-        except Exception as e:
-            error_msg = f"Failed to read/analyze CV: {str(e)}"
-            agent_logger.error(
-                "CV analysis failed",
-                cv_file_path=cv_file_path,
-                error=error_msg,
-                error_type=type(e).__name__,
-            )
-
-            return {
-                **state,
-                "trace_id": trace_id,
-                "errors": state.get("errors", []) + [error_msg],
-                "current_status": "CV analysis failed",
-            }
+        # Compile the graph - Langfuse observability is now handled during invoke
+        # Use bound logger for setup messages
+        setup_logger = logger.bind(trace_id="setup")
+        setup_logger.info("LangGraph compiled - observability handled during invoke")
+        return workflow.compile()
 
     def search_jobs_node(self, state: JobApplicationAgentState) -> Dict[str, Any]:
         """Search for jobs using all provided search criteria via MCP protocol."""
@@ -366,9 +310,26 @@ class JobApplicationAgent:
             trace_id=trace_id,  # Add trace_id to state
         )
 
-        # Execute the workflow with Langfuse config that includes trace_id
-        langfuse_config = get_langfuse_config_for_langgraph(trace_id)
-        final_state = self.graph.invoke(initial_state, config=langfuse_config)
+        # Execute the workflow with Langfuse observability
+        from src.core.observability.langfuse_config import get_langfuse_callback
+
+        callback_handler = get_langfuse_callback()
+
+        # Prepare config for the invoke call
+        invoke_config = {"configurable": {"trace_id": trace_id}} if trace_id else {}
+
+        # Add callback handler if available (pass directly as callbacks param if supported)
+        if callback_handler:
+            try:
+                final_state = self.graph.invoke(
+                    initial_state, config=invoke_config, callbacks=[callback_handler]
+                )
+            except TypeError:
+                # Fallback: try passing in config
+                invoke_config["callbacks"] = [callback_handler]
+                final_state = self.graph.invoke(initial_state, config=invoke_config)
+        else:
+            final_state = self.graph.invoke(initial_state, config=invoke_config)
 
         agent_logger.info(
             "Core agent run completed",

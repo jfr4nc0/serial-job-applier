@@ -1,51 +1,72 @@
 import asyncio
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
-from mcp import ClientSession
-from mcp.client.stdio import StdioServerParameters, stdio_client
+from dotenv import load_dotenv
+from fastmcp import Client
+from fastmcp.client.transports import StdioTransport
 
 from src.core.model import ApplicationRequest, ApplicationResult, CVAnalysis, JobResult
+
+# Load environment variables
+load_dotenv()
 
 
 class LinkedInMCPClient:
     """
-    Official MCP client for communicating with the LinkedIn MCP server.
-    Uses the proper MCP SDK for protocol communication over stdio.
+    Official FastMCP client for communicating with the LinkedIn MCP server.
+    Uses FastMCP's StdioTransport for protocol communication over stdio.
+    The client manages the LinkedIn MCP server lifecycle as a subprocess.
     """
 
-    def __init__(self, server_command: str = None):
-        # For stdio, we need a command to run the server
-        self.server_command = server_command or os.getenv(
-            "MCP_SERVER_COMMAND", "python -m linkedin_mcp.linkedin.linkedin_server"
+    def __init__(self, keep_alive: bool = True):
+        # Prepare environment variables needed by the LinkedIn server
+        env = {
+            "LINKEDIN_EMAIL": os.getenv("LINKEDIN_EMAIL"),
+            "LINKEDIN_PASSWORD": os.getenv("LINKEDIN_PASSWORD"),
+            "LINKEDIN_MCP_LOG_LEVEL": os.getenv("LINKEDIN_MCP_LOG_LEVEL", "INFO"),
+            "LINKEDIN_MCP_LOG_FILE": os.getenv("LINKEDIN_MCP_LOG_FILE"),
+        }
+
+        # Filter out None values
+        env = {k: v for k, v in env.items() if v is not None}
+
+        command_parts = [
+            "poetry",
+            "run",
+            "python",
+            "-m",
+            "linkedin_mcp.linkedin.linkedin_server",
+        ]
+        command = command_parts[0] if command_parts else "python"
+        args = command_parts[1:] if len(command_parts) > 1 else []
+
+        self.transport = StdioTransport(
+            command=command, args=args, env=env, keep_alive=keep_alive
         )
-        self.session = None
-        self.stdio_client = None
+
+        self.client = Client(self.transport)
 
     async def __aenter__(self):
-        # Create stdio client and session
-        server_params = StdioServerParameters(command=self.server_command)
-        self.stdio_client = stdio_client(server=server_params)
-        self.read_stream, self.write_stream = await self.stdio_client.__aenter__()
-
-        # Initialize session
-        self.session = ClientSession(self.read_stream, self.write_stream)
-        await self.session.__aenter__()
-
-        # Initialize the server
-        await self.session.initialize()
-
+        # FastMCP client handles the connection automatically
+        await self.client.__aenter__()
         return self
 
+    async def list_tools(self):
+        """
+        Discover available tools on the LinkedIn MCP server.
+
+        Returns:
+            List of available tools with their metadata
+        """
+        return await self.client.list_tools()
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.__aexit__(exc_type, exc_val, exc_tb)
-        if self.stdio_client:
-            await self.stdio_client.__aexit__(exc_type, exc_val, exc_tb)
+        await self.client.__aexit__(exc_type, exc_val, exc_tb)
 
     async def _call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """
-        Call an MCP tool using the official MCP SDK.
+        Call an MCP tool using the FastMCP Client.
 
         Args:
             tool_name: Name of the MCP tool to call
@@ -58,25 +79,23 @@ class LinkedInMCPClient:
             Exception: If the MCP call fails
         """
         try:
-            if not self.session:
-                raise Exception("MCP session not initialized")
+            # Call the tool using FastMCP Client with manual error checking
+            result = await self.client.call_tool(
+                tool_name, arguments, raise_on_error=False
+            )
 
-            # Call the tool using MCP SDK
-            result = await self.session.call_tool(tool_name, arguments)
+            # Check if the tool execution failed
+            if result.is_error:
+                error_content = (
+                    result.content[0].text if result.content else "Unknown error"
+                )
+                raise Exception(f"Tool '{tool_name}' execution failed: {error_content}")
 
-            # Extract content from MCP result
-            if hasattr(result, "content") and result.content:
-                # Handle different content types
-                if len(result.content) == 1 and hasattr(result.content[0], "text"):
-                    return result.content[0].text
-                else:
-                    # Return the raw content for complex responses
-                    return result.content
-            else:
-                raise Exception(f"No content returned from tool '{tool_name}'")
+            # FastMCP returns structured data directly
+            return result.data
 
         except Exception as e:
-            raise Exception(f"MCP tool call failed for '{tool_name}': {str(e)}")
+            raise Exception(f"FastMCP tool call failed for '{tool_name}': {str(e)}")
 
     async def search_jobs(
         self,
@@ -116,12 +135,6 @@ class LinkedInMCPClient:
             arguments["trace_id"] = trace_id
 
         result = await self._call_tool("search_jobs", arguments)
-
-        # Parse JSON result if it's a string
-        if isinstance(result, str):
-            import json
-
-            result = json.loads(result)
 
         # Convert result to JobResult format
         return [
@@ -178,12 +191,6 @@ class LinkedInMCPClient:
             arguments["trace_id"] = trace_id
 
         result = await self._call_tool("easy_apply_for_jobs", arguments)
-
-        # Parse JSON result if it's a string
-        if isinstance(result, str):
-            import json
-
-            result = json.loads(result)
 
         # Convert result to ApplicationResult format
         return [

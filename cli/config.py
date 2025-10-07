@@ -113,7 +113,7 @@ class CLIConfig(BaseModel):
         update_dict["mcp_server_host"] = env_config.mcp_server_host
         update_dict["mcp_server_port"] = env_config.mcp_server_port
 
-        return self.copy(update=update_dict)
+        return self.model_copy(update=update_dict)
 
     def validate_required_fields(self) -> List[str]:
         """Validate that required fields are present. Returns list of missing fields."""

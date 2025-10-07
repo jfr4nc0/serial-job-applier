@@ -21,7 +21,7 @@ def main():
     # Example job search requests
     job_searches: List[JobSearchRequest] = [
         {
-            "job_title": "Python Developer",
+            "job_title": "Software Engineer",
             "location": "Remote",
             "monthly_salary": 5000,
             "limit": 20,

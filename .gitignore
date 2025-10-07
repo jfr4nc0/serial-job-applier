@@ -1,6 +1,9 @@
 poetry.lock
 .env
 .idea/*
+.venv
+
+data/*
 
 # Python cache files
 __pycache__/

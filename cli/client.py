@@ -273,7 +273,7 @@ class JobApplicationCLI:
         while True:
             self.ui.console.print(f"Configuring job search #{len(job_searches) + 1}:")
 
-            job_title = self.ui.prompt_user_input("Job title", "Python Developer")
+            job_title = self.ui.prompt_user_input("Job title", "Software Engineer")
             location = self.ui.prompt_user_input("Location", "Remote")
             salary_str = self.ui.prompt_user_input("Monthly salary (USD)", "5000")
             limit_str = self.ui.prompt_user_input("Job limit", "20")
@@ -327,7 +327,7 @@ class JobApplicationCLI:
         return CLIConfig(
             job_searches=[
                 JobSearchConfig(
-                    job_title="Python Developer",
+                    job_title="Software Engineer",
                     location="Remote",
                     monthly_salary=5000,
                     limit=20,
@@ -342,27 +342,13 @@ class JobApplicationCLI:
         )
 
     def _setup_logging(self):
-        """Setup logging configuration."""
-        logger.remove()  # Remove default handler
+        """Setup logging configuration using core agent logging to maintain trace_id consistency."""
+        from src.core.utils.logging_config import configure_core_agent_logging
 
-        # Console logging
-        if self.config.output_format != "json":
-            logger.add(
-                sys.stderr,
-                level=self.config.log_level,
-                format="<green>{time}</green> | <level>{level}</level> | {message}",
-                filter=lambda record: self.config.output_format
-                != "rich",  # Only log in simple mode
-            )
-
-        # File logging
-        if self.config.log_file:
-            logger.add(
-                self.config.log_file,
-                level=self.config.log_level,
-                format="{time} | {level} | {message}",
-                rotation="10 MB",
-            )
+        # Use core agent logging configuration which supports trace_id
+        configure_core_agent_logging(
+            log_level=self.config.log_level, log_file=self.config.log_file
+        )
 
     def _execute_workflow(self):
         """Execute the main job application workflow."""
@@ -390,6 +376,14 @@ class JobApplicationCLI:
                 "password": self.config.linkedin_password,
             }
 
+            # Use logger that will have trace_id after agent.run() configures it
+            # We'll bind a temporary trace_id for the initial log
+            import uuid
+
+            from src.core.utils.logging_config import get_core_agent_logger
+
+            temp_trace_id = str(uuid.uuid4())
+            logger = get_core_agent_logger(temp_trace_id)
             logger.info("Starting job application workflow")
 
             # Run the workflow with progress updates
@@ -406,6 +400,12 @@ class JobApplicationCLI:
                 self._handle_workflow_results(final_state)
 
         except Exception as e:
+            import uuid
+
+            from src.core.utils.logging_config import get_core_agent_logger
+
+            temp_trace_id = str(uuid.uuid4())
+            logger = get_core_agent_logger(temp_trace_id)
             logger.exception("Workflow execution failed")
             raise
 
@@ -455,7 +455,12 @@ class JobApplicationCLI:
         if self.config.save_results:
             self._save_results(final_state)
 
-        logger.info("Workflow completed successfully")
+        # Use trace_id-aware logger, getting trace_id from final_state
+        trace_id = final_state.get("trace_id", "unknown")
+        from src.core.utils.logging_config import get_core_agent_logger
+
+        logger_with_trace = get_core_agent_logger(trace_id)
+        logger_with_trace.info("Workflow completed successfully")
 
     def _save_results(self, final_state: Dict[str, Any]):
         """Save workflow results to file."""

@@ -184,6 +184,59 @@ For detailed CLI usage, see [CLI_USAGE.md](CLI_USAGE.md).
 - **Serverless Inference**: Cloud-based high-performance inference
 - **PDF Processing**: PyPDF2 and pdfplumber for CV text extraction
 
+## CV Data Structure
+
+The system processes CVs by converting PDFs to structured JSON data that follows this schema:
+
+```json
+{
+  "name": "string",
+  "email": "string",
+  "location": "string",
+  "phone": "string",
+  "work_experience": [
+    {
+      "title": "string",
+      "company": "string",
+      "start_date": "string",
+      "end_date": "string",
+      "description": "string",
+      "stack": ["string"]
+    }
+  ],
+  "education": [
+    {
+      "title": "string",
+      "institution": "string",
+      "start_date": "string",
+      "end_date": "string"
+    }
+  ],
+  "certifications": [
+    {
+      "title": "string",
+      "institution": "string",
+      "start_date": "string",
+      "end_date": "string"
+    }
+  ],
+  "languages": [
+    {
+      "title": "string",
+      "level": "string"
+    }
+  ],
+  "skills": [
+    {
+      "title": "string",
+      "level": "string"
+    }
+  ]
+}
+```
+
+This structured data is used for intelligent job matching and application personalization.
+
 ## Workflow
 
 1. **CV Analysis**: Extract and structure data from PDF CV

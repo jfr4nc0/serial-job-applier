@@ -12,11 +12,9 @@ class LinkedInMCPClientSync:
     """
 
     def __init__(self, server_host: str = None, server_port: int = None):
-        # For backward compatibility, convert host/port to command
-        # In a real implementation, you might want to keep TCP support
-        # For now, we'll use stdio with a default command
-        server_command = "python -m linkedin_mcp.linkedin.linkedin_server"
-        self.client = LinkedInMCPClient(server_command=server_command)
+        # For MCP, we use stdio transport with server command
+        # server_host and server_port are kept for backward compatibility but not used
+        self.client = LinkedInMCPClient()
 
     def search_jobs(
         self,
