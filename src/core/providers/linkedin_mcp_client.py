@@ -22,7 +22,7 @@ class LinkedInMCPClient:
     def __init__(
         self,
         use_http: bool = True,
-        server_url: str = "http://localhost:8000",
+        server_url: str = "http://localhost:8000/mcp",
         keep_alive: bool = True,
     ):
         self.use_http = use_http
