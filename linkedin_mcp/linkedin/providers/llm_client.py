@@ -1,5 +1,6 @@
 import os
 
+from dotenv import load_dotenv
 from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 
 
@@ -15,6 +16,7 @@ def get_llm_client(
     Returns:
         Configured ChatHuggingFace client pointing to HF Serverless API
     """
+    load_dotenv()
     hf_token = os.getenv("HUGGING_FACE_HUB_TOKEN")
     if not hf_token:
         raise ValueError("HUGGING_FACE_HUB_TOKEN environment variable is required")

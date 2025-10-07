@@ -78,17 +78,7 @@ def easy_apply_for_jobs(
 
 
 if __name__ == "__main__":
-    import asyncio
-    import sys
-
-    from mcp.server.tcp import tcp_server
-
-    # Get host and port from environment, default to 0.0.0.0:3000
-    host = os.getenv(
-        "MCP_SERVER_HOST", "0.0.0.0"
-    )  # Bind to all interfaces in container
-    port = int(os.getenv("MCP_SERVER_PORT", "3000"))
-
-    # Run the server with TCP transport (standard for MCP)
-    print(f"Starting LinkedIn MCP Server on {host}:{port}")
-    asyncio.run(tcp_server(mcp, host=host, port=port))
+    # For FastMCP, stdio is the standard MCP transport
+    # TCP/HTTP servers are typically for development/testing
+    print("Starting LinkedIn MCP Server with stdio transport")
+    mcp.run()

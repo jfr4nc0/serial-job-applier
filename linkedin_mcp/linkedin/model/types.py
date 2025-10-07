@@ -1,7 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional, TypedDict
-
-if TYPE_CHECKING:
-    from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
+from typing import Any, List, Optional, TypedDict
 
 
 class CVAnalysis(TypedDict):
@@ -38,5 +35,5 @@ class JobResult(TypedDict):
 class AuthState(TypedDict):
     email: str
     password: str
-    browser_manager: "IBrowserManager"
+    browser_manager: Any
     authenticated: bool
