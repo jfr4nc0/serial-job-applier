@@ -31,10 +31,34 @@ The system uses a **single-container architecture** with Hugging Face Serverless
  **Containerized Architecture**: Scalable Docker-based deployment
  **Error Handling**: Comprehensive error recovery and logging
 
+## Usage Options
+
+### 🖥️ Terminal Client (Recommended)
+Interactive command-line interface with rich formatting and real-time progress.
+
+```bash
+# Quick start with interactive setup
+python job_applier.py run --interactive
+
+# Use configuration file
+python job_applier.py run --config ./examples/config.yaml
+
+# Initialize configuration
+python job_applier.py init
+```
+
+### 🐳 Docker Deployment
+Full containerized deployment with MCP server architecture.
+
+```bash
+# Build and start services
+docker-compose up -d
+```
+
 ## Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose
+- Python 3.12+ (for terminal client) OR Docker and Docker Compose
 - LinkedIn account credentials
 - PDF CV file
 - Hugging Face account and API token (for serverless inference)
@@ -45,7 +69,33 @@ git clone <repository-url>
 cd serial-job-applier
 ```
 
-### 2. Environment Configuration
+### 2. Terminal Client Setup (Quick Start)
+
+```bash
+# Install dependencies
+pip install poetry
+poetry install
+
+# Set environment variables (recommended for security)
+export LINKEDIN_EMAIL="your-email@example.com"
+export LINKEDIN_PASSWORD="your-password"
+export CV_FILE_PATH="./data/cv.pdf"
+export HUGGING_FACE_HUB_TOKEN="your-hf-token"
+export MCP_SERVER_HOST="localhost"  # Optional - defaults to localhost
+export MCP_SERVER_PORT="3000"       # Optional - defaults to 3000
+
+# Or use .env file
+cp .env.example .env
+# Edit .env with your actual values
+
+# Place your CV file
+cp /path/to/your/cv.pdf data/cv.pdf
+
+# Run interactive setup
+python job_applier.py run --interactive
+```
+
+### 3. Docker Setup (Full System)
 Create `.env` file:
 ```bash
 LINKEDIN_EMAIL=your-email@example.com
@@ -70,6 +120,52 @@ docker-compose logs -f core-agent
 ```
 
 ### 5. The job application workflow runs automatically when the container starts
+
+## Terminal Client Features
+
+### 🎯 Command Overview
+- **`run`**: Execute the complete job application workflow
+- **`init`**: Create and configure a new configuration file
+- **`validate`**: Validate configuration files
+- **`test-connection`**: Test MCP server connectivity
+
+### 🎨 Output Formats
+- **Rich**: Beautiful terminal UI with colors, progress bars, and tables
+- **Simple**: Plain text output for logging and scripting
+- **JSON**: Machine-readable output for automation
+
+### 📋 Configuration Management
+- **YAML Configuration**: Human-readable configuration files
+- **Environment Variables**: Secure credential management
+- **Interactive Setup**: Step-by-step configuration wizard
+- **Validation**: Comprehensive configuration validation
+
+### 📊 Progress Tracking
+- **Real-time Status**: Live workflow progress updates
+- **Results Storage**: Automatic saving of workflow results
+- **Error Reporting**: Detailed error analysis and troubleshooting
+- **Logging**: Configurable logging for debugging
+
+### 🔧 Usage Examples
+
+```bash
+# Interactive job search setup
+python job_applier.py run --interactive
+
+# Use configuration file
+python job_applier.py run --config ./examples/config.yaml
+
+# JSON output for automation
+python job_applier.py run --format json --save
+
+# Test MCP server connection
+python job_applier.py test-connection --mcp-host localhost --mcp-port 3000
+
+# Create configuration file
+python job_applier.py init --config ./my-config.yaml
+```
+
+For detailed CLI usage, see [CLI_USAGE.md](CLI_USAGE.md).
 
 ## System Components
 

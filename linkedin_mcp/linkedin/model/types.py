@@ -1,4 +1,7 @@
-from typing import List, TypedDict
+from typing import TYPE_CHECKING, List, Optional, TypedDict
+
+if TYPE_CHECKING:
+    from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
 
 
 class CVAnalysis(TypedDict):
@@ -15,3 +18,25 @@ class CVAnalysis(TypedDict):
 class ApplicationRequest(TypedDict):
     job_id: int
     monthly_salary: int
+
+
+class ApplicationResult(TypedDict):
+    id_job: int
+    success: bool
+    error: Optional[str]
+
+
+class JobResult(TypedDict):
+    job_id: str
+    title: str
+    company: str
+    location: str
+    description: str
+    easy_apply: bool
+
+
+class AuthState(TypedDict):
+    email: str
+    password: str
+    browser_manager: "IBrowserManager"
+    authenticated: bool

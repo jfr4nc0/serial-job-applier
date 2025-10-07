@@ -11,8 +11,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
+from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
 
-class BrowserManagerService:
+
+class BrowserManagerService(IBrowserManager):
     """Manages browser instances for LinkedIn automation."""
 
     def __init__(self, headless: bool = False, use_undetected: bool = True):
@@ -70,6 +72,28 @@ class BrowserManagerService:
             self.driver.quit()
             self.driver = None
             self.wait = None
+
+    # Interface methods
+    def get_driver(self):
+        """Get the current WebDriver instance."""
+        if not self.driver:
+            self.start_browser()
+        return self.driver
+
+    def navigate_to_job(self, job_id: str) -> None:
+        """Navigate to a specific job page."""
+        if not self.driver:
+            self.start_browser()
+
+        job_url = f"https://www.linkedin.com/jobs/view/{job_id}/"
+        self.driver.get(job_url)
+
+        # Wait for page to load
+        self.wait.until(EC.presence_of_element_located((By.TAG_NAME, "main")))
+
+    def cleanup(self) -> None:
+        """Clean up browser resources."""
+        self.close_browser()
 
     def navigate_to_linkedin(self):
         """Navigate to LinkedIn homepage."""

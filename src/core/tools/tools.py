@@ -6,8 +6,8 @@ import PyPDF2
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
 
-from src.providers import get_llm_client
-from src.types import CVAnalysis
+from src.core.model.cv_analysis import CVAnalysis
+from src.core.providers.llm_client import get_llm_client
 
 
 @tool

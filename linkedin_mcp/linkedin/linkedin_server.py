@@ -7,14 +7,14 @@ import os
 
 from fastmcp import FastMCP
 
-from linkedin_mcp.linkedin.services.job_application_service import JobApplicationService
-from linkedin_mcp.linkedin.services.job_search_service import JobSearchService
-from linkedin_mcp.types import (
+from linkedin_mcp.linkedin.model.types import (
     ApplicationRequest,
     ApplicationResult,
     CVAnalysis,
     JobResult,
 )
+from linkedin_mcp.linkedin.services.job_application_service import JobApplicationService
+from linkedin_mcp.linkedin.services.job_search_service import JobSearchService
 
 mcp = FastMCP("LinkedIn Job Applier")
 
@@ -72,8 +72,8 @@ def easy_apply_for_jobs(
     Returns:
         List of application results with id_job, success status, and optional error message
     """
-    return job_application_service.easy_apply_for_jobs(
-        applications, cv_analysis, email, password
+    return job_application_service.apply_to_jobs(
+        applications, cv_analysis, {"email": email, "password": password}
     )
 
 

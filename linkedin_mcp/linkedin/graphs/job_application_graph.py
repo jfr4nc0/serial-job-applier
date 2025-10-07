@@ -1,29 +1,33 @@
-from typing import List, Optional, TypedDict
+from typing import Any, List, Optional, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from linkedin_mcp.linkedin.agents.easy_apply_agent import EasyApplyAgent
-from linkedin_mcp.linkedin.services.browser_manager_service import (
-    BrowserManagerService as BrowserManager,
-)
-from linkedin_mcp.types import ApplicationRequest, CVAnalysis
+from linkedin_mcp.linkedin.interfaces.agents import IJobApplicationAgent
+from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
+from linkedin_mcp.linkedin.model.types import ApplicationRequest, CVAnalysis
 
 
 class JobApplicationState(TypedDict):
     applications: List[ApplicationRequest]
     cv_analysis: CVAnalysis
-    browser_manager: BrowserManager
+    browser_manager: IBrowserManager
     current_application_index: int
     application_results: List[dict]
     current_application: Optional[ApplicationRequest]
-    easy_apply_agent: EasyApplyAgent
+    job_application_agent: IJobApplicationAgent
     errors: List[str]
 
 
 class JobApplicationGraph:
     """LangGraph workflow for LinkedIn job application RPA."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        job_application_agent: IJobApplicationAgent,
+        browser_manager: IBrowserManager,
+    ):
+        self.job_application_agent = job_application_agent
+        self.browser_manager = browser_manager
         self.graph = self._create_graph()
 
     def _create_graph(self) -> StateGraph:
@@ -53,10 +57,11 @@ class JobApplicationGraph:
         return workflow.compile()
 
     def _initialize_agent(self, state: JobApplicationState) -> JobApplicationState:
-        """Initialize the EasyApply agent."""
+        """Initialize the job application agent."""
         return {
             **state,
-            "easy_apply_agent": EasyApplyAgent(),
+            "job_application_agent": self.job_application_agent,
+            "browser_manager": self.browser_manager,
             "current_application_index": 0,
         }
 
@@ -76,9 +81,9 @@ class JobApplicationGraph:
         """Process a single job application using the EasyApply agent."""
         try:
             current_app = state["current_application"]
-            result = state["easy_apply_agent"].apply_to_job(
+            result = state["job_application_agent"].apply_to_job(
                 job_id=current_app["job_id"],
-                monthly_salary=current_app["monthly_salary"],
+                application_request=current_app,
                 cv_analysis=state["cv_analysis"],
                 browser_manager=state["browser_manager"],
             )
@@ -118,7 +123,7 @@ class JobApplicationGraph:
         self,
         applications: List[ApplicationRequest],
         cv_analysis: CVAnalysis,
-        authenticated_browser_manager: BrowserManager,
+        authenticated_browser_manager: IBrowserManager,
     ) -> List[dict]:
         """Execute the job application workflow with pre-authenticated browser."""
         initial_state = JobApplicationState(
@@ -128,7 +133,7 @@ class JobApplicationGraph:
             current_application_index=0,
             application_results=[],
             current_application=None,
-            easy_apply_agent=None,
+            job_application_agent=None,
             errors=[],
         )
 

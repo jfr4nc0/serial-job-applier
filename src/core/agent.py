@@ -2,14 +2,13 @@ from typing import Any, Dict, List
 
 from langgraph.graph import END, StateGraph
 
-from src.providers import LinkedInMCPClientSync, get_llm_client
-from src.tools import analyze_cv_structure, read_pdf_cv
-from src.types import (
-    ApplicationRequest,
-    JobApplicationAgentState,
-    JobResult,
-    JobSearchRequest,
-)
+from src.core.model.application_request import ApplicationRequest
+from src.core.model.job_application_agent_state import JobApplicationAgentState
+from src.core.model.job_result import JobResult
+from src.core.model.job_search_request import JobSearchRequest
+from src.core.providers.linkedin_mcp_client_sync import LinkedInMCPClientSync
+from src.core.providers.llm_client import get_llm_client
+from src.core.tools.tools import analyze_cv_structure, read_pdf_cv
 
 
 class JobApplicationAgent:
@@ -49,10 +48,10 @@ class JobApplicationAgent:
         """Read and analyze the CV file."""
         try:
             # Extract text from PDF
-            cv_content = read_pdf_cv(state["cv_file_path"])
+            cv_content = read_pdf_cv.invoke({"file_path": state["cv_file_path"]})
 
             # Analyze CV structure with AI
-            cv_analysis = analyze_cv_structure(cv_content)
+            cv_analysis = analyze_cv_structure.invoke({"cv_text": cv_content})
 
             return {
                 **state,

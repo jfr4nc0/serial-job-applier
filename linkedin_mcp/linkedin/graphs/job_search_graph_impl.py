@@ -7,17 +7,16 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
 from linkedin_mcp.linkedin.model.job_search_state import JobSearchState
-from linkedin_mcp.linkedin.services.browser_manager_service import (
-    BrowserManagerService as BrowserManager,
-)
-from linkedin_mcp.types import JobResult
+from linkedin_mcp.linkedin.model.types import JobResult
 
 
 class JobSearchGraph:
     """LangGraph workflow for LinkedIn job search RPA."""
 
-    def __init__(self):
+    def __init__(self, browser_manager: IBrowserManager):
+        self.browser_manager = browser_manager
         self.graph = self._create_graph()
 
     def _create_graph(self) -> StateGraph:
@@ -221,7 +220,7 @@ class JobSearchGraph:
         location: str,
         easy_apply: bool,
         limit: int,
-        authenticated_browser_manager: BrowserManager,
+        authenticated_browser_manager: IBrowserManager,
     ) -> List[JobResult]:
         """Execute the job search workflow with pre-authenticated browser."""
         initial_state = JobSearchState(

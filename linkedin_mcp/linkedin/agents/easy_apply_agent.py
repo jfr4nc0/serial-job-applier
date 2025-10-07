@@ -7,11 +7,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from linkedin_mcp.linkedin.services.browser_manager_service import (
-    BrowserManagerService as BrowserManager,
-)
-from linkedin_mcp.providers import get_llm_client
-from linkedin_mcp.types import CVAnalysis
+from linkedin_mcp.linkedin.interfaces.agents import IJobApplicationAgent
+from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
+from linkedin_mcp.linkedin.model.types import ApplicationRequest, CVAnalysis
+from linkedin_mcp.linkedin.providers.llm_client import get_llm_client
 
 
 class EasyApplyState(Dict):
@@ -20,7 +19,7 @@ class EasyApplyState(Dict):
     job_id: int
     monthly_salary: int
     cv_analysis: CVAnalysis
-    browser_manager: BrowserManager
+    browser_manager: IBrowserManager
     current_step: str
     form_questions: List[Dict[str, Any]]
     form_answers: Dict[str, Any]
@@ -28,7 +27,7 @@ class EasyApplyState(Dict):
     error: str
 
 
-class EasyApplyAgent:
+class EasyApplyAgent(IJobApplicationAgent):
     """
     AI-powered agent for handling LinkedIn Easy Apply forms using Qwen model.
     Analyzes form questions and provides intelligent answers based on CV data.
@@ -516,17 +515,17 @@ class EasyApplyAgent:
 
     def apply_to_job(
         self,
-        job_id: int,
-        monthly_salary: int,
+        job_id: str,
+        application_request: ApplicationRequest,
         cv_analysis: CVAnalysis,
-        browser_manager: BrowserManager,
+        browser_manager: IBrowserManager,
     ) -> Dict[str, Any]:
         """
         Apply to a single job using the Easy Apply workflow.
 
         Args:
             job_id: LinkedIn job ID
-            monthly_salary: Expected monthly salary
+            application_request: Application details including salary expectations
             cv_analysis: Structured CV analysis for form filling
             browser_manager: Browser automation manager
 
@@ -535,7 +534,7 @@ class EasyApplyAgent:
         """
         initial_state = EasyApplyState(
             job_id=job_id,
-            monthly_salary=monthly_salary,
+            monthly_salary=application_request.monthly_salary,
             cv_analysis=cv_analysis,
             browser_manager=browser_manager,
             current_step="starting",
@@ -564,3 +563,19 @@ class EasyApplyAgent:
                 "form_answers": {},
                 "current_step": "workflow_failed",
             }
+
+    def is_easy_apply_available(
+        self, job_id: str, browser_manager: IBrowserManager
+    ) -> bool:
+        """Check if Easy Apply is available for the job."""
+        try:
+            driver = browser_manager.get_driver()
+            browser_manager.navigate_to_job(job_id)
+
+            # Look for Easy Apply button
+            easy_apply_button = driver.find_elements(
+                By.XPATH, "//button[contains(@aria-label, 'Easy Apply')]"
+            )
+            return len(easy_apply_button) > 0
+        except Exception:
+            return False

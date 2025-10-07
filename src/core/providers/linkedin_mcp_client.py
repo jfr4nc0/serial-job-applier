@@ -3,27 +3,30 @@ import os
 from typing import Any, Dict, List
 
 from mcp import ClientSession
-from mcp.client.tcp import tcp_client
+from mcp.client.stdio import StdioServerParameters, stdio_client
 
-from src.types import ApplicationRequest, ApplicationResult, CVAnalysis, JobResult
+from src.core.model import ApplicationRequest, ApplicationResult, CVAnalysis, JobResult
 
 
 class LinkedInMCPClient:
     """
     Official MCP client for communicating with the LinkedIn MCP server.
-    Uses the proper MCP SDK for protocol communication over TCP.
+    Uses the proper MCP SDK for protocol communication over stdio.
     """
 
-    def __init__(self, server_host: str = None, server_port: int = None):
-        self.server_host = server_host or os.getenv(
-            "MCP_SERVER_HOST", "linkedin-mcp-server"
+    def __init__(self, server_command: str = None):
+        # For stdio, we need a command to run the server
+        self.server_command = server_command or os.getenv(
+            "MCP_SERVER_COMMAND", "python -m linkedin_mcp.linkedin.linkedin_server"
         )
-        self.server_port = server_port or int(os.getenv("MCP_SERVER_PORT", "3000"))
+        self.session = None
+        self.stdio_client = None
 
     async def __aenter__(self):
-        # Create TCP client and session
-        self.tcp_client = tcp_client(host=self.server_host, port=self.server_port)
-        self.read_stream, self.write_stream = await self.tcp_client.__aenter__()
+        # Create stdio client and session
+        server_params = StdioServerParameters(command=self.server_command)
+        self.stdio_client = stdio_client(server=server_params)
+        self.read_stream, self.write_stream = await self.stdio_client.__aenter__()
 
         # Initialize session
         self.session = ClientSession(self.read_stream, self.write_stream)
@@ -35,15 +38,9 @@ class LinkedInMCPClient:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if hasattr(self, "session"):
-            await self.session.__aexit__(exc_type, exc_val, exc_tb)
-        if hasattr(self, "tcp_client"):
-            await self.tcp_client.__aexit__(exc_type, exc_val, exc_tb)
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.session:
             await self.session.__aexit__(exc_type, exc_val, exc_tb)
-        if hasattr(self, "stdio_client"):
+        if self.stdio_client:
             await self.stdio_client.__aexit__(exc_type, exc_val, exc_tb)
 
     async def _call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:

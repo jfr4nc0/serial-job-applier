@@ -1,6 +1,8 @@
 from selenium.webdriver.common.by import By
 
-from linkedin_mcp.linkedin.services import AuthState, BrowserManager, LinkedInAuthGraph
+from linkedin_mcp.linkedin.graphs.linkedin_auth_graph import LinkedInAuthGraph
+from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
+from linkedin_mcp.linkedin.model.types import AuthState
 
 
 class LinkedInAuthService:
@@ -10,7 +12,7 @@ class LinkedInAuthService:
         self.auth_graph = LinkedInAuthGraph()
 
     def authenticate(
-        self, email: str, password: str, browser_manager: BrowserManager
+        self, email: str, password: str, browser_manager: IBrowserManager
     ) -> AuthState:
         """
         Authenticate with LinkedIn using provided credentials.
@@ -25,7 +27,7 @@ class LinkedInAuthService:
         """
         return self.auth_graph.execute(email, password, browser_manager)
 
-    def is_authenticated(self, browser_manager: BrowserManager) -> bool:
+    def is_authenticated(self, browser_manager: IBrowserManager) -> bool:
         """
         Check if currently authenticated with LinkedIn.
 

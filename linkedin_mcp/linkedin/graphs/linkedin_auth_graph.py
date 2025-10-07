@@ -1,19 +1,10 @@
-from typing import TypedDict
-
 from langgraph.graph import END, StateGraph
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from linkedin_mcp.linkedin.services.browser_manager import BrowserManager
-
-
-class AuthState(TypedDict):
-    email: str
-    password: str
-    browser_manager: BrowserManager
-    authenticated: bool
-    error: str
+from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
+from linkedin_mcp.linkedin.model.types import AuthState
 
 
 class LinkedInAuthGraph:
@@ -136,7 +127,7 @@ class LinkedInAuthGraph:
             return state
 
     def execute(
-        self, email: str, password: str, browser_manager: BrowserManager
+        self, email: str, password: str, browser_manager: "IBrowserManager"
     ) -> AuthState:
         """Execute the authentication workflow."""
         initial_state = AuthState(

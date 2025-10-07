@@ -1,8 +1,8 @@
 import asyncio
 from typing import List
 
+from src.core.model import ApplicationRequest, ApplicationResult, CVAnalysis, JobResult
 from src.core.providers.linkedin_mcp_client import LinkedInMCPClient
-from src.types import ApplicationRequest, ApplicationResult, CVAnalysis, JobResult
 
 
 class LinkedInMCPClientSync:
@@ -12,8 +12,11 @@ class LinkedInMCPClientSync:
     """
 
     def __init__(self, server_host: str = None, server_port: int = None):
-        self.server_host = server_host
-        self.server_port = server_port
+        # For backward compatibility, convert host/port to command
+        # In a real implementation, you might want to keep TCP support
+        # For now, we'll use stdio with a default command
+        server_command = "python -m linkedin_mcp.linkedin.linkedin_server"
+        self.client = LinkedInMCPClient(server_command=server_command)
 
     def search_jobs(
         self,
@@ -27,7 +30,7 @@ class LinkedInMCPClientSync:
         """Synchronous wrapper for search_jobs."""
 
         async def _search():
-            async with LinkedInMCPClient(self.server_host, self.server_port) as client:
+            async with self.client as client:
                 return await client.search_jobs(
                     job_title, location, easy_apply, email, password, limit
                 )
@@ -44,7 +47,7 @@ class LinkedInMCPClientSync:
         """Synchronous wrapper for easy_apply_for_jobs."""
 
         async def _apply():
-            async with LinkedInMCPClient(self.server_host, self.server_port) as client:
+            async with self.client as client:
                 return await client.easy_apply_for_jobs(
                     applications, cv_analysis, email, password
                 )
