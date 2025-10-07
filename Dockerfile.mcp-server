@@ -1,0 +1,53 @@
+# LinkedIn MCP Server Dockerfile
+FROM python:3.12-slim
+
+# Install system dependencies for Selenium, Chrome, and browser automation
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    wget \
+    gnupg \
+    unzip \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Install Poetry
+RUN pip install poetry
+
+# Configure Poetry
+RUN poetry config virtualenvs.create false
+
+# Install dependencies
+RUN poetry install --only=main
+
+# Copy only the LinkedIn MCP server code (completely isolated)
+COPY linkedin_mcp/ ./linkedin_mcp/
+COPY .scripts/start_linkedin_mcp.sh /app/.scripts/start_linkedin_mcp.sh
+
+# Create necessary directories
+RUN mkdir -p /tmp/chrome-data && chmod 755 /tmp/chrome-data
+
+# Make start script executable
+RUN chmod +x /app/.scripts/start_linkedin_mcp.sh
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV CHROME_PATH=/usr/bin/google-chrome
+
+# Start the LinkedIn MCP server
+CMD ["/app/.scripts/start_linkedin_mcp.sh"]
