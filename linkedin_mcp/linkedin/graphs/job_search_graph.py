@@ -95,30 +95,41 @@ class JobSearchGraph:
         """Extract job listings from the current page."""
         try:
             driver = state["browser_manager"].driver
-            job_cards = driver.find_elements(By.CLASS_NAME, "job-search-card")
+
+            job_cards = driver.find_elements(
+                By.CSS_SELECTOR, "[data-occludable-job-id]"
+            )
+
+            print(f"Found {len(job_cards)} job cards on page {state['current_page']}")
 
             page_jobs = []
 
             for card in job_cards:
                 try:
-                    # Extract job ID from data attributes or href
-                    job_link = card.find_element(By.CSS_SELECTOR, "h3 a")
-                    job_url = job_link.get_attribute("href")
+                    # Extract job ID from data-job-id attribute
+                    job_id = card.get_attribute("data-occludable-job-id")
 
-                    # Extract job ID from URL
-                    job_id = None
-                    if "/view/" in job_url:
-                        job_id = int(job_url.split("/view/")[1].split("/")[0])
+                    # Convert to int
+                    job_id = int(job_id)
 
-                    if not job_id:
-                        continue
-
-                    # Extract job description (summary from search results)
+                    # Extract job description by clicking on the job link
                     try:
-                        description_element = card.find_element(
-                            By.CSS_SELECTOR, ".job-search-card__snippet"
-                        )
-                        job_description = description_element.text.strip()
+                        href_element = card.find_element(By.CSS_SELECTOR, "[href]")
+                        href_element.click()
+                        state["browser_manager"].random_delay(1, 2)
+
+                        # Extract job description from the opened job view
+                        try:
+                            job_description_element = driver.find_element(
+                                By.CSS_SELECTOR,
+                                ".jobs-description__content.jobs-description-content",
+                            )
+                            job_description = extract_job_description_text(
+                                job_description_element
+                            )
+                        except NoSuchElementException:
+                            job_description = "No description available"
+
                     except NoSuchElementException:
                         job_description = "No description available"
 
@@ -130,6 +141,9 @@ class JobSearchGraph:
                                 job_description=job_description,
                             )
                         )
+                    else:
+                        # Break the loop if we've reached the limit
+                        break
 
                 except Exception as e:
                     # Skip problematic job cards
@@ -233,6 +247,36 @@ class JobSearchGraph:
 
         result = self.graph.invoke(initial_state)
         return result["collected_jobs"]
+
+
+def extract_job_description_text(container_element) -> str:
+    """Extract all text nodes within a container, filtering out empty strings."""
+    # Use JavaScript to get all text nodes within the container
+    driver = container_element._parent
+    script = """
+    var container = arguments[0];
+    var walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+    );
+
+    var textNodes = [];
+    var node;
+    while (node = walker.nextNode()) {
+        var text = node.textContent.trim();
+        if (text) {
+            textNodes.push(text);
+        }
+    }
+    return textNodes;
+    """
+
+    text_nodes = driver.execute_script(script, container_element)
+
+    # Join all non-empty text parts with spaces
+    return " ".join(text_nodes) if text_nodes else ""
 
 
 __all__ = ["JobSearchState", "JobSearchGraph"]

@@ -22,7 +22,7 @@ def test_search_jobs():
     # Set parameters
     job_title = "Software Engineer"
     location = "Remote"
-    limit = 2
+    limit = 10
     user_credentials = {
         "email": os.getenv("LINKEDIN_EMAIL", "test@example.com"),
         "password": os.getenv("LINKEDIN_PASSWORD", "test_password"),
