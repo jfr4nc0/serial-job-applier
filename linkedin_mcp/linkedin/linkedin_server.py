@@ -159,6 +159,20 @@ log_mcp_tool_registration(
 
 
 if __name__ == "__main__":
-    # LinkedIn MCP Server runs via stdio transport (launched by client)
-    # This is the standard MCP pattern - server is subprocess of client
-    mcp.run()
+    import argparse
+
+    import uvicorn
+
+    parser = argparse.ArgumentParser(description="LinkedIn MCP Server")
+    parser.add_argument("--http", action="store_true", help="Run as HTTP server")
+    parser.add_argument("--host", default="localhost", help="HTTP server host")
+    parser.add_argument("--port", type=int, default=8000, help="HTTP server port")
+    args = parser.parse_args()
+
+    if args.http:
+        # Run as direct HTTP server using FastMCP's built-in HTTP transport
+        print(f"Starting LinkedIn MCP HTTP server on {args.host}:{args.port}")
+        mcp.run(transport="http", host=args.host, port=args.port)
+    else:
+        # Run via stdio transport (default MCP pattern)
+        mcp.run()
