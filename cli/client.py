@@ -308,7 +308,9 @@ class JobApplicationCLI:
 
         linkedin_email = self.ui.prompt_user_input("LinkedIn email")
         linkedin_password = self.ui.prompt_user_input("LinkedIn password")
-        cv_file_path = self.ui.prompt_user_input("CV file path", "./data/cv.pdf")
+        cv_file_path = self.ui.prompt_user_input(
+            "CV data JSON path", "./data/cv_data.json"
+        )
 
         config = CLIConfig(
             linkedin_email=linkedin_email,
@@ -422,8 +424,8 @@ class JobApplicationCLI:
         ) as live:
             final_state = agent.run(
                 job_searches=job_search_requests,
-                cv_file_path=self.config.cv_file_path,
                 user_credentials=user_credentials,
+                cv_data_path=self.config.cv_file_path,  # Now expects CV JSON data path
             )
 
             live.update(Text("✅ Workflow completed!", style="bold green"))
@@ -465,6 +467,8 @@ class JobApplicationCLI:
     def _save_results(self, final_state: Dict[str, Any]):
         """Save workflow results to file."""
         try:
+            # Use bound logger for save operations
+            save_logger = get_core_agent_logger("save-results")
             # Create results directory
             results_dir = Path(self.config.results_directory)
             results_dir.mkdir(parents=True, exist_ok=True)
@@ -486,7 +490,7 @@ class JobApplicationCLI:
             self.ui.console.print(f"📁 Results saved to {filepath}", style="blue")
 
         except Exception as e:
-            logger.warning(f"Failed to save results: {str(e)}")
+            save_logger.warning(f"Failed to save results: {str(e)}")
             self.ui.console.print(
                 f"⚠️  Failed to save results: {str(e)}", style="yellow"
             )

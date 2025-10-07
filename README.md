@@ -31,6 +31,103 @@ The system uses a **single-container architecture** with Hugging Face Serverless
  **Containerized Architecture**: Scalable Docker-based deployment
  **Error Handling**: Comprehensive error recovery and logging
 
+## CV Data Structure
+
+The system uses a structured JSON format for CV data located at `/data/cv_data.json`. This replaces PDF CV processing and enables more precise job matching.
+
+### CV JSON Schema
+
+```json
+{
+  "name": "string",
+  "email": "string",
+  "location": "string",
+  "phone": "string",
+  "work_experience": [
+    {
+      "title": "string",
+      "company": "string",
+      "start_date": "MM-YYYY",
+      "end_date": "MM-YYYY",
+      "description": "string",
+      "stack": ["string", "string", ...]
+    }
+  ],
+  "education": [
+    {
+      "title": "string",
+      "institution": "string",
+      "start_date": "MM-YYYY",
+      "end_date": "MM-YYYY"
+    }
+  ],
+  "certifications": [
+    {
+      "title": "string",
+      "institution": "string",
+      "start_date": "MM-YYYY",
+      "end_date": "MM-YYYY"
+    }
+  ],
+  "languages": [
+    {
+      "title": "string",
+      "level": "Native|Fluent|Intermediate|Basic"
+    }
+  ],
+  "skills": [
+    {
+      "title": "string",
+      "level": "Advanced|Intermediate|Basic"
+    }
+  ]
+}
+```
+
+### Example CV Data
+
+```json
+{
+  "name": "Joan Canossa",
+  "email": "joan.canossa@example.com",
+  "location": "Ciudad Autónoma de Buenos Aires, Argentina.",
+  "phone": "(+54) 112171370",
+  "work_experience": [
+    {
+      "title": "Software Engineer",
+      "company": "Mercado Libre",
+      "start_date": "11-2024",
+      "end_date": "11-2025",
+      "description": "Designed and developed the integration of a robotics orchestration system...",
+      "stack": ["Java", "Spring", "JavaScript", "TypeScript", "MySQL", "Python"]
+    }
+  ],
+  "education": [
+    {
+      "title": "Bachelor's Degree in Information Technology Management",
+      "institution": "UADE",
+      "start_date": "08-2024",
+      "end_date": "06-2025"
+    }
+  ],
+  "skills": [
+    {
+      "title": "Java",
+      "level": "Advanced"
+    }
+  ]
+}
+```
+
+### Benefits of JSON CV Format
+
+- **Structured Data**: Precise field extraction without AI parsing errors
+- **Technology Stack Matching**: Direct technology comparison for job filtering
+- **Experience Calculation**: Automatic years of experience computation
+- **Skill Level Matching**: Granular skill level comparison with job requirements
+- **Performance**: Instant CV loading vs. slow PDF processing
+- **Consistency**: Deterministic CV data across multiple job applications
+
 ## Usage Options
 
 ### 🖥️ Terminal Client (Recommended)

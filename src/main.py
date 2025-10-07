@@ -46,17 +46,17 @@ def main():
         )
         sys.exit(1)
 
-    # CV file path (should be mounted volume in Docker)
-    cv_file_path = os.getenv("CV_FILE_PATH", "/app/data/cv.pdf")
+    # CV data JSON file path
+    cv_data_path = os.getenv("CV_DATA_PATH", "./data/cv_data.json")
 
-    if not os.path.exists(cv_file_path):
-        print(f"Error: CV file not found at {cv_file_path}")
+    if not os.path.exists(cv_data_path):
+        print(f"Error: CV data file not found at {cv_data_path}")
         sys.exit(1)
 
     print("Starting LinkedIn Job Application Agent...")
     print(f"MCP Server Host: {mcp_server_host}")
     print(f"MCP Server Port: {mcp_server_port}")
-    print(f"CV File: {cv_file_path}")
+    print(f"CV Data: {cv_data_path}")
     print(f"Job Searches: {len(job_searches)} searches configured")
 
     try:
@@ -68,8 +68,8 @@ def main():
         # Run the complete workflow
         result = agent.run(
             job_searches=job_searches,
-            cv_file_path=cv_file_path,
             user_credentials=user_credentials,
+            cv_data_path=cv_data_path,  # Now expecting JSON CV data path
         )
 
         # Print results

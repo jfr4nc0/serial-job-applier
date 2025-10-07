@@ -1,5 +1,5 @@
 import asyncio
-from typing import List
+from typing import Any, Dict, List, Union
 
 from src.core.model import ApplicationRequest, ApplicationResult, CVAnalysis, JobResult
 from src.core.providers.linkedin_mcp_client import LinkedInMCPClient
@@ -39,7 +39,7 @@ class LinkedInMCPClientSync:
     def easy_apply_for_jobs(
         self,
         applications: List[ApplicationRequest],
-        cv_analysis: CVAnalysis,
+        cv_analysis: Union[CVAnalysis, Dict[str, Any]],
         email: str,
         password: str,
         trace_id: str = None,

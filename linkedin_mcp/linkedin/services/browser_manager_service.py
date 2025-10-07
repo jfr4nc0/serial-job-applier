@@ -30,12 +30,13 @@ class BrowserManagerService(IBrowserManager):
         if self.headless:
             options.add_argument("--headless")
 
-        # Anti-detection options
+        # Basic options for compatibility
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option("useAutomationExtension", False)
+        # Remove problematic experimental options temporarily
+        # options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        # options.add_experimental_option("useAutomationExtension", False)
 
         # Performance options
         options.add_argument("--disable-extensions")
@@ -53,8 +54,10 @@ class BrowserManagerService(IBrowserManager):
         options = self._get_chrome_options()
 
         if self.use_undetected:
+            # Let undetected_chromedriver auto-detect the Chrome version
             self.driver = uc.Chrome(options=options)
         else:
+            # Auto-install compatible ChromeDriver version
             service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=options)
 

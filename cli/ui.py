@@ -59,7 +59,7 @@ class TerminalUI:
         table.add_row(
             "MCP Server", f"{config.mcp_server_host}:{config.mcp_server_port}"
         )
-        table.add_row("CV File", config.cv_file_path)
+        table.add_row("CV Data", config.cv_file_path)
         table.add_row("LinkedIn Email", config.linkedin_email)
         table.add_row("Job Searches", str(len(config.job_searches)))
 

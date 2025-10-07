@@ -99,18 +99,18 @@ def search_jobs(
 @mcp.tool
 def easy_apply_for_jobs(
     applications: list[ApplicationRequest],
-    cv_analysis: CVAnalysis,
+    cv_analysis: dict,
     email: str,
     password: str,
     trace_id: str = None,
 ) -> list[ApplicationResult]:
     """
     Apply to multiple jobs using LinkedIn's easy apply feature with AI-powered form handling.
-    Handles authentication automatically and uses CV analysis to answer form questions intelligently.
+    Handles authentication automatically and uses CV data to answer form questions intelligently.
 
     Args:
         applications: List of application requests with job_id and monthly_salary
-        cv_analysis: Structured CV analysis data for AI form filling
+        cv_analysis: Full CV data as dictionary (JSON structure with work_experience, skills, etc.)
         email: LinkedIn email for authentication
         password: LinkedIn password for authentication
         trace_id: Optional trace ID for correlation

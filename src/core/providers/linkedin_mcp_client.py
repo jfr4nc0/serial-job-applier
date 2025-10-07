@@ -145,7 +145,7 @@ class LinkedInMCPClient:
     async def easy_apply_for_jobs(
         self,
         applications: List[ApplicationRequest],
-        cv_analysis: CVAnalysis,
+        cv_analysis: Union[CVAnalysis, Dict[str, Any]],
         email: str,
         password: str,
         trace_id: str = None,
@@ -155,9 +155,10 @@ class LinkedInMCPClient:
 
         Args:
             applications: List of application requests with job_id and monthly_salary
-            cv_analysis: Structured CV analysis data for AI form filling
+            cv_analysis: CV data as dict (JSON structure) or CVAnalysis object for AI form filling
             email: LinkedIn email for authentication
             password: LinkedIn password for authentication
+            trace_id: Optional trace ID for correlation
 
         Returns:
             List of application results with id_job, success status, and optional error message
@@ -168,16 +169,22 @@ class LinkedInMCPClient:
             for app in applications
         ]
 
-        cv_analysis_dict = {
-            "skills": cv_analysis["skills"],
-            "experience_years": cv_analysis["experience_years"],
-            "previous_roles": cv_analysis["previous_roles"],
-            "education": cv_analysis["education"],
-            "certifications": cv_analysis["certifications"],
-            "domains": cv_analysis["domains"],
-            "key_achievements": cv_analysis["key_achievements"],
-            "technologies": cv_analysis["technologies"],
-        }
+        # Handle cv_analysis as either dict or CVAnalysis object
+        if isinstance(cv_analysis, dict):
+            # CV data is already a dict (JSON structure)
+            cv_analysis_dict = cv_analysis
+        else:
+            # Convert CVAnalysis to dict format
+            cv_analysis_dict = {
+                "skills": cv_analysis["skills"],
+                "experience_years": cv_analysis["experience_years"],
+                "previous_roles": cv_analysis["previous_roles"],
+                "education": cv_analysis["education"],
+                "certifications": cv_analysis["certifications"],
+                "domains": cv_analysis["domains"],
+                "key_achievements": cv_analysis["key_achievements"],
+                "technologies": cv_analysis["technologies"],
+            }
 
         arguments = {
             "applications": applications_dict,

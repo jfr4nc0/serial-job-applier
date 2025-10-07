@@ -15,5 +15,11 @@
     "program": "$ZED_WORKTREE_ROOT/job_applier.py",
     "request": "launch",
     "args": ["run"]
+  },
+  {
+    "label": "Job Search Tool",
+    "adapter": "Debugpy",
+    "program": "$ZED_WORKTREE_ROOT/tests/test_search_jobs.py",
+    "request": "launch"
   }
 ]

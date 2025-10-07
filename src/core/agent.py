@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Any, Dict, List
 
@@ -11,6 +12,7 @@ from src.core.model.job_search_request import JobSearchRequest
 from src.core.observability.langfuse_config import get_langfuse_config_for_langgraph
 from src.core.providers.linkedin_mcp_client_sync import LinkedInMCPClientSync
 from src.core.providers.llm_client import get_llm_client
+from src.core.tools.cv_loader import extract_cv_analysis, load_cv_data
 from src.core.tools.tools import analyze_cv_structure, read_pdf_cv
 from src.core.utils.logging_config import get_core_agent_logger
 
@@ -220,10 +222,13 @@ class JobApplicationAgent:
                 }
 
             # Call LinkedIn MCP easy_apply_for_jobs tool with trace_id
+            # Parse CV data from JSON string to pass as dict
+            cv_data_dict = json.loads(state["cv_content"])
+
             mcp_client = LinkedInMCPClientSync(self.server_host, self.server_port)
             application_results = mcp_client.easy_apply_for_jobs(
                 applications=applications,
-                cv_analysis=state["cv_analysis"],
+                cv_analysis=cv_data_dict,  # Pass full CV data as dict instead of analysis
                 email=state["user_credentials"]["email"],
                 password=state["user_credentials"]["password"],
                 trace_id=trace_id,  # Pass trace_id to MCP
@@ -253,16 +258,16 @@ class JobApplicationAgent:
     def run(
         self,
         job_searches: List[JobSearchRequest],
-        cv_file_path: str,
         user_credentials: Dict[str, str],
+        cv_data_path: str = None,
     ) -> JobApplicationAgentState:
         """
         Execute the complete job application workflow.
 
         Args:
             job_searches: List of job search criteria
-            cv_file_path: Path to the CV PDF file
             user_credentials: LinkedIn credentials {email, password}
+            cv_data_path: Path to CV JSON file (defaults to ./data/cv_data.json)
 
         Returns:
             Final agent state with all results
@@ -277,31 +282,53 @@ class JobApplicationAgent:
 
         # Get logger for this run
         agent_logger = get_core_agent_logger(trace_id)
+
+        # Load CV data from JSON
+        try:
+            cv_data = load_cv_data(cv_data_path)
+            cv_analysis = extract_cv_analysis(cv_data)
+            agent_logger.info(
+                "CV data loaded successfully",
+                name=cv_data.get("name"),
+                skills_count=len(cv_analysis["skills"]),
+                experience_years=cv_analysis["experience_years"],
+            )
+        except Exception as e:
+            error_msg = f"Failed to load CV data: {str(e)}"
+            agent_logger.error(error_msg)
+            # Return error state
+            return JobApplicationAgentState(
+                job_searches=job_searches,
+                cv_content="",
+                user_credentials=user_credentials,
+                current_search_index=0,
+                all_found_jobs=[],
+                filtered_jobs=[],
+                application_results=[],
+                cv_analysis={},
+                conversation_history=[],
+                errors=[error_msg],
+                total_jobs_found=0,
+                total_jobs_applied=0,
+                current_status="CV loading failed",
+                trace_id=trace_id,
+            )
+
         agent_logger.info(
             "Starting core agent run",
             job_searches_count=len(job_searches),
-            cv_file_path=cv_file_path,
+            cv_data_path=cv_data_path or "./data/cv_data.json",
         )
 
         initial_state = JobApplicationAgentState(
             job_searches=job_searches,
-            cv_file_path=cv_file_path,
-            cv_content="",
+            cv_content=json.dumps(cv_data),  # Store CV data as JSON string
             user_credentials=user_credentials,
             current_search_index=0,
             all_found_jobs=[],
             filtered_jobs=[],
             application_results=[],
-            cv_analysis={
-                "skills": [],
-                "experience_years": 0,
-                "previous_roles": [],
-                "education": [],
-                "certifications": [],
-                "domains": [],
-                "key_achievements": [],
-                "technologies": [],
-            },
+            cv_analysis=cv_analysis,  # Use extracted CV analysis
             conversation_history=[],
             errors=[],
             total_jobs_found=0,

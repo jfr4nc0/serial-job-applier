@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from linkedin_mcp.linkedin.graphs.job_search_graph_impl import JobSearchGraph
+from linkedin_mcp.linkedin.graphs.job_search_graph import JobSearchGraph
 from linkedin_mcp.linkedin.interfaces.services import IJobSearchService
 from linkedin_mcp.linkedin.model.types import JobResult
 from linkedin_mcp.linkedin.services.browser_manager_service import (

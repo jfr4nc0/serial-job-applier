@@ -2,7 +2,6 @@ import uuid
 from typing import Any, List, Optional, TypedDict
 
 from langgraph.graph import END, StateGraph
-from loguru import logger
 
 from linkedin_mcp.linkedin.interfaces.agents import IJobApplicationAgent
 from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
@@ -10,6 +9,7 @@ from linkedin_mcp.linkedin.model.types import ApplicationRequest, CVAnalysis
 from linkedin_mcp.linkedin.observability.langfuse_config import (
     get_langfuse_config_for_mcp_langgraph,
 )
+from linkedin_mcp.linkedin.utils.logging_config import get_mcp_logger
 
 
 class JobApplicationState(TypedDict):
@@ -61,6 +61,7 @@ class JobApplicationGraph:
         workflow.add_edge("record_result", "select_next_application")
 
         # Compile the graph - Langfuse observability is handled during invoke
+        logger = get_mcp_logger("graph-compilation")
         logger.info(
             "JobApplicationGraph compiled - observability handled during invoke"
         )

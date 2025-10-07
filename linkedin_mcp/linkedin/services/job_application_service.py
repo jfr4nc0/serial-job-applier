@@ -1,8 +1,6 @@
 import uuid
 from typing import Dict, List
 
-from loguru import logger
-
 from linkedin_mcp.linkedin.agents.easy_apply_agent import EasyApplyAgent
 from linkedin_mcp.linkedin.graphs.job_application_graph import JobApplicationGraph
 from linkedin_mcp.linkedin.interfaces.services import IJobApplicationService
@@ -16,6 +14,7 @@ from linkedin_mcp.linkedin.services.browser_manager_service import (
     BrowserManagerService as BrowserManager,
 )
 from linkedin_mcp.linkedin.services.linkedin_auth_service import LinkedInAuthService
+from linkedin_mcp.linkedin.utils.logging_config import get_mcp_logger
 
 
 class JobApplicationService(IJobApplicationService):
@@ -64,9 +63,9 @@ class JobApplicationService(IJobApplicationService):
             },
         )
 
+        logger = get_mcp_logger(trace_id)
         logger.info(
             "Starting LinkedIn job application workflow",
-            trace_id=trace_id,
             applications_count=len(applications),
             email=user_credentials.get("email", "unknown"),
         )
@@ -77,16 +76,16 @@ class JobApplicationService(IJobApplicationService):
 
         if not email or not password:
             error_msg = "Email and password are required in user_credentials"
-            logger.error("Invalid credentials", trace_id=trace_id, error=error_msg)
+            logger.error("Invalid credentials", error=error_msg)
             raise ValueError(error_msg)
 
         try:
             # Step 1: Initialize browser (use injected dependency)
-            logger.info("Initializing browser", trace_id=trace_id)
+            logger.info("Initializing browser")
             self.browser_manager.start_browser()
 
             # Step 2: Authenticate with LinkedIn
-            logger.info("Authenticating with LinkedIn", trace_id=trace_id, email=email)
+            logger.info("Authenticating with LinkedIn", email=email)
             auth_result = self.auth_service.authenticate(
                 email, password, self.browser_manager
             )
@@ -97,7 +96,7 @@ class JobApplicationService(IJobApplicationService):
                 )
 
             # Step 3: Execute job application workflow with AI form handling
-            logger.info("Starting job application graph execution", trace_id=trace_id)
+            logger.info("Starting job application graph execution")
             raw_results = self.application_graph.execute(
                 applications, cv_analysis, self.browser_manager, trace_id=trace_id
             )

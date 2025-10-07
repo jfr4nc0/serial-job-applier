@@ -98,23 +98,7 @@ class LinkedInAuthGraph:
 
             # Check if we're redirected away from login page
             if "/jobs/" in current_url and "/login" not in current_url:
-                # Additional check for presence of user-specific elements
-                try:
-                    # Look for elements that indicate successful login
-                    driver.find_element(
-                        By.CSS_SELECTOR, '[data-test-id="nav-top-profile"]'
-                    )
-                    state["authenticated"] = True
-                except NoSuchElementException:
-                    # Alternative check for job search elements
-                    try:
-                        driver.find_element(
-                            By.CSS_SELECTOR, 'input[aria-label*="Search job"]'
-                        )
-                        state["authenticated"] = True
-                    except NoSuchElementException:
-                        state["authenticated"] = False
-                        state["error"] = "Authentication verification failed"
+                state["authenticated"] = True
             else:
                 state["authenticated"] = False
                 state["error"] = "Login failed - still on login page"
