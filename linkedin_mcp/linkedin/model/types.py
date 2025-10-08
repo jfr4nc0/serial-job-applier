@@ -33,3 +33,6 @@ class AuthState(TypedDict):
     password: str
     browser_manager: Any
     authenticated: bool
+    captcha_detected: bool
+    captcha_solved: bool
+    error: str

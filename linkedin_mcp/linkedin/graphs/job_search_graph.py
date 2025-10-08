@@ -79,7 +79,7 @@ class JobSearchGraph:
         try:
             state["browser_manager"].driver.get(state["search_url"])
 
-            state["browser_manager"].random_delay(1, 2)
+            state["browser_manager"].random_delay(0.5, 1)
 
             return {
                 **state,
@@ -111,7 +111,7 @@ class JobSearchGraph:
                         "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
                         card,
                     )
-                    state["browser_manager"].random_delay(0.5, 1)
+                    state["browser_manager"].random_delay(0.2, 0.5)
 
                     # Extract job ID from data-job-id attribute
                     job_id = card.get_attribute("data-occludable-job-id")
@@ -123,15 +123,9 @@ class JobSearchGraph:
                     try:
                         href_element = card.find_element(By.CSS_SELECTOR, "[href]")
 
-                        # Ensure the href element is also in view and clickable
-                        driver.execute_script(
-                            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});",
-                            href_element,
-                        )
-                        state["browser_manager"].random_delay(0.5, 1)
-
+                        # Click directly without additional scrolling (card scroll handles it)
                         href_element.click()
-                        state["browser_manager"].random_delay(1, 2)
+                        state["browser_manager"].random_delay(0.8, 1.2)
 
                         # Extract job description from the opened job view
                         try:
@@ -219,12 +213,14 @@ class JobSearchGraph:
             )
 
             next_button.click()
-            state["browser_manager"].random_delay(3, 5)
 
-            # Wait for new results to load
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "job-search-card"))
+            # Wait for new results to load (explicit wait replaces delay)
+            WebDriverWait(driver, 8).until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "[data-occludable-job-id]")
+                )
             )
+            state["browser_manager"].random_delay(0.5, 1)
 
             return {
                 **state,

@@ -22,13 +22,23 @@ class LinkedInAuthGraph:
         workflow.add_node("fill_credentials", self._fill_credentials)
         workflow.add_node("submit_login", self._submit_login)
         workflow.add_node("verify_authentication", self._verify_authentication)
+        workflow.add_node("handle_captcha", self._handle_captcha)
 
         # Define the flow
         workflow.set_entry_point("navigate_to_login")
         workflow.add_edge("navigate_to_login", "fill_credentials")
         workflow.add_edge("fill_credentials", "submit_login")
         workflow.add_edge("submit_login", "verify_authentication")
-        workflow.add_edge("verify_authentication", END)
+
+        # Conditional edge from verify_authentication
+        workflow.add_conditional_edges(
+            "verify_authentication",
+            self._should_handle_captcha,
+            {"captcha": "handle_captcha", "complete": END},
+        )
+
+        # After handling CAPTCHA, go back to verify authentication
+        workflow.add_edge("handle_captcha", "verify_authentication")
 
         return workflow.compile()
 
@@ -91,23 +101,88 @@ class LinkedInAuthGraph:
             return state
 
     def _verify_authentication(self, state: AuthState) -> AuthState:
-        """Verify that authentication was successful."""
+        """Verify that authentication was successful or detect CAPTCHA."""
         try:
             driver = state["browser_manager"].driver
             current_url = driver.current_url
 
-            # Check if we're redirected away from login page
+            # Check for CAPTCHA challenge
+            if "/checkpoint/challenge" in current_url:
+                state["captcha_detected"] = True
+                state["authenticated"] = False
+                print(f"\n🔒 CAPTCHA Challenge Detected!")
+                print(f"Current URL: {current_url}")
+                return state
+
+            # Check if we're redirected away from login page (successful authentication)
             if "/jobs/" in current_url and "/login" not in current_url:
                 state["authenticated"] = True
+                state["captcha_detected"] = False
             else:
                 state["authenticated"] = False
+                state["captcha_detected"] = False
                 state["error"] = "Login failed - still on login page"
 
             return state
 
         except Exception as e:
             state["authenticated"] = False
+            state["captcha_detected"] = False
             state["error"] = f"Authentication verification error: {str(e)}"
+            return state
+
+    def _should_handle_captcha(self, state: AuthState) -> str:
+        """Determine if CAPTCHA handling is needed."""
+        if state.get("captcha_detected", False) and not state.get(
+            "captcha_solved", False
+        ):
+            return "captcha"
+        else:
+            return "complete"
+
+    def _handle_captcha(self, state: AuthState) -> AuthState:
+        """Handle CAPTCHA challenge by waiting for user to solve it manually."""
+        try:
+            driver = state["browser_manager"].driver
+            current_url = driver.current_url
+
+            print(f"\n" + "=" * 60)
+            print(f"🔒 CAPTCHA CHALLENGE DETECTED")
+            print(f"=" * 60)
+            print(f"Current URL: {current_url}")
+            print(f"\n📋 INSTRUCTIONS:")
+            print(f"1. Look at the browser window - LinkedIn is showing a CAPTCHA")
+            print(f"2. Manually solve the CAPTCHA challenge")
+            print(f"3. Complete any additional verification steps")
+            print(f"4. When you see the LinkedIn homepage/jobs page, come back here")
+            print(f"\n⏳ The automation will wait for your confirmation...")
+            print(f"=" * 60)
+
+            # Wait for user confirmation
+            input(
+                "\n✅ Press ENTER after you have successfully solved the CAPTCHA and are logged in: "
+            )
+
+            # Add a small delay to let the page stabilize
+            state["browser_manager"].random_delay(2, 3)
+
+            # Mark CAPTCHA as solved
+            state["captcha_solved"] = True
+            state["captcha_detected"] = False
+
+            print(
+                f"✅ CAPTCHA handling completed. Continuing authentication verification..."
+            )
+
+            return state
+
+        except KeyboardInterrupt:
+            state["error"] = "CAPTCHA handling cancelled by user"
+            state["authenticated"] = False
+            return state
+        except Exception as e:
+            state["error"] = f"Error during CAPTCHA handling: {str(e)}"
+            state["authenticated"] = False
             return state
 
     def execute(
@@ -119,6 +194,8 @@ class LinkedInAuthGraph:
             password=password,
             browser_manager=browser_manager,
             authenticated=False,
+            captcha_detected=False,
+            captcha_solved=False,
             error="",
         )
 

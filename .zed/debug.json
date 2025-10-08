@@ -21,5 +21,11 @@
     "adapter": "Debugpy",
     "program": "$ZED_WORKTREE_ROOT/tests/test_search_jobs.py",
     "request": "launch"
+  },
+  {
+    "label": "Job Application Tool",
+    "adapter": "Debugpy",
+    "program": "$ZED_WORKTREE_ROOT/tests/test_job_application.py",
+    "request": "launch"
   }
 ]

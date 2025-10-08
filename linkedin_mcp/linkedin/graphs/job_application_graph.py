@@ -70,6 +70,7 @@ class JobApplicationGraph:
     def _initialize_agent(self, state: JobApplicationState) -> JobApplicationState:
         """Initialize the job application agent."""
         trace_id = state.get("trace_id", str(uuid.uuid4()))
+        logger = get_mcp_logger(trace_id)
 
         logger.info(
             "Initializing job application agent",
@@ -90,6 +91,7 @@ class JobApplicationGraph:
     ) -> JobApplicationState:
         """Select the next application to process."""
         trace_id = state.get("trace_id", "unknown")
+        logger = get_mcp_logger(trace_id)
         current_index = state["current_application_index"]
         total_applications = len(state["applications"])
 
@@ -115,6 +117,7 @@ class JobApplicationGraph:
     def _process_application(self, state: JobApplicationState) -> JobApplicationState:
         """Process a single job application using the EasyApply agent."""
         trace_id = state.get("trace_id", "unknown")
+        logger = get_mcp_logger(trace_id)
         current_app = state["current_application"]
         job_id = current_app.get("job_id", "unknown")
 
@@ -194,6 +197,7 @@ class JobApplicationGraph:
         if not trace_id:
             trace_id = str(uuid.uuid4())
 
+        logger = get_mcp_logger(trace_id)
         logger.info(
             "Executing job application graph",
             trace_id=trace_id,

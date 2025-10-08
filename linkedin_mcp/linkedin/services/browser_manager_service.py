@@ -1,17 +1,20 @@
+import random
 import time
 from typing import Optional
 
 import undetected_chromedriver as uc
-from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 from linkedin_mcp.linkedin.interfaces.services import IBrowserManager
+from linkedin_mcp.linkedin.utils.logging_config import get_mcp_logger
+from linkedin_mcp.linkedin.utils.user_agent_rotator import user_agent_rotator
 
 
 class BrowserManagerService(IBrowserManager):
@@ -22,19 +25,36 @@ class BrowserManagerService(IBrowserManager):
         self.use_undetected = use_undetected
         self.driver: Optional[webdriver.Chrome] = None
         self.wait: Optional[WebDriverWait] = None
+        self.viewport_sizes = [
+            (1920, 1080),
+            (1366, 768),
+            (1536, 864),
+            (1440, 900),
+            (1280, 720),
+        ]
 
     def _get_chrome_options(self) -> Options:
         """Configure Chrome options for LinkedIn automation."""
         options = Options()
+        logger = get_mcp_logger("browser-manager")
 
-        if self.headless:
+        # Random viewport size
+        if not self.headless:
+            width, height = random.choice(self.viewport_sizes)
+            options.add_argument(f"--window-size={width},{height}")
+            # Random window position
+            x_pos = random.randint(0, 100)
+            y_pos = random.randint(0, 100)
+            options.add_argument(f"--window-position={x_pos},{y_pos}")
+        else:
             options.add_argument("--headless")
 
         # Basic options for compatibility
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-blink-features=AutomationControlled")
-        # Remove problematic experimental options temporarily
+
+        # Anti-detection experimental options (removed problematic ones)
         # options.add_experimental_option("excludeSwitches", ["enable-automation"])
         # options.add_experimental_option("useAutomationExtension", False)
 
@@ -43,9 +63,10 @@ class BrowserManagerService(IBrowserManager):
         options.add_argument("--disable-plugins")
         options.add_argument("--disable-images")
 
-        # User agent
-        ua = UserAgent()
-        options.add_argument(f"--user-agent={ua.random}")
+        # Use random user agent for each session
+        random_user_agent = user_agent_rotator.get_random_user_agent()
+        options.add_argument(f"--user-agent={random_user_agent}")
+        logger.info(f"Using user agent: {random_user_agent[:80]}...")
 
         return options
 
@@ -122,7 +143,49 @@ class BrowserManagerService(IBrowserManager):
 
     def random_delay(self, min_seconds: float = 1.0, max_seconds: float = 3.0):
         """Add random delay to mimic human behavior."""
-        import random
-
         delay = random.uniform(min_seconds, max_seconds)
         time.sleep(delay)
+
+    def human_type(self, element, text: str):
+        """Type text with human-like patterns."""
+        element.clear()
+        for char in text:
+            element.send_keys(char)
+            # Random typing speed
+            time.sleep(random.uniform(0.05, 0.2))
+            # Occasional longer pauses (like thinking)
+            if random.random() < 0.1:
+                time.sleep(random.uniform(0.3, 0.8))
+
+    def random_scroll(self):
+        """Add random scrolling to mimic human browsing."""
+        if self.driver:
+            # Random scroll direction and amount
+            scroll_amount = random.randint(-300, 300)
+            self.driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
+            time.sleep(random.uniform(0.5, 1.5))
+
+    def human_click(self, element):
+        """Click with human-like mouse movement."""
+        if self.driver:
+            # Move to element with slight randomness
+            actions = ActionChains(self.driver)
+            actions.move_to_element_with_offset(
+                element, random.randint(-5, 5), random.randint(-5, 5)
+            )
+            actions.pause(random.uniform(0.1, 0.3))
+            actions.click()
+            actions.perform()
+            time.sleep(random.uniform(0.2, 0.6))
+
+    def random_mouse_movement(self):
+        """Add random mouse movements to appear more human."""
+        if self.driver:
+            actions = ActionChains(self.driver)
+            # Random movements
+            for _ in range(random.randint(1, 3)):
+                x_offset = random.randint(-100, 100)
+                y_offset = random.randint(-100, 100)
+                actions.move_by_offset(x_offset, y_offset)
+                actions.pause(random.uniform(0.1, 0.5))
+            actions.perform()

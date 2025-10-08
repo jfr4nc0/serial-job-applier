@@ -93,7 +93,14 @@ class EasyApplyAgent(IJobApplicationAgent):
         workflow.add_edge("navigate_to_job", "click_easy_apply")
         workflow.add_edge("click_easy_apply", "analyze_form")
         workflow.add_edge("analyze_form", "fill_form")
-        workflow.add_edge("fill_form", "submit_application")
+
+        # Conditional edge after filling form
+        workflow.add_conditional_edges(
+            "fill_form",
+            self.has_next_step_or_submit,
+            {"next": "analyze_form", "submit": "submit_application"},
+        )
+
         workflow.add_edge("submit_application", END)
 
         return workflow.compile()
@@ -129,29 +136,24 @@ class EasyApplyAgent(IJobApplicationAgent):
         try:
             driver = state["browser_manager"].driver
 
-            # Multiple selectors for Easy Apply button
-            easy_apply_selectors = [
-                "button[aria-label*='Easy Apply']",
-                "button[data-control-name='jobdetails_topcard_inapply']",
-                ".jobs-apply-button--top-card button",
-                "button.jobs-apply-button",
-                "button:contains('Easy Apply')",
+            easy_apply_button = None
+
+            # Try multiple selectors to find Easy Apply button
+            selectors = [
+                'button[data-view-name="job-apply-button"]',
+                'a[data-view-name="job-apply-button"]',
+                'button[data-job-id="job-apply-button"]',
+                'a[data-job-id="job-apply-button"]',
+                "button[data-job-id]",
+                "a[data-job-id]",
             ]
 
-            easy_apply_button = None
-            for selector in easy_apply_selectors:
+            for selector in selectors:
                 try:
-                    if ":contains" in selector:
-                        # Use XPath for text content search
-                        easy_apply_button = driver.find_element(
-                            By.XPATH, f"//button[contains(text(), 'Easy Apply')]"
-                        )
-                    else:
-                        easy_apply_button = driver.find_element(
-                            By.CSS_SELECTOR, selector
-                        )
-                    break
-                except NoSuchElementException:
+                    easy_apply_button = driver.find_element(By.CSS_SELECTOR, selector)
+                    if easy_apply_button:
+                        break
+                except:
                     continue
 
             if not easy_apply_button:
@@ -162,8 +164,16 @@ class EasyApplyAgent(IJobApplicationAgent):
                     "current_step": "easy_apply_not_found",
                 }
 
-            # Click the Easy Apply button
-            easy_apply_button.click()
+            # Click the Easy Apply button with human-like interaction
+            try:
+                state["browser_manager"].human_click(easy_apply_button)
+            except Exception:
+                # Fallback to JavaScript click if regular click fails
+                driver.execute_script("arguments[0].click();", easy_apply_button)
+
+            # Add random mouse movement and scrolling after clicking
+            state["browser_manager"].random_mouse_movement()
+            state["browser_manager"].random_scroll()
             state["browser_manager"].random_delay(3, 5)
 
             return {
@@ -270,9 +280,86 @@ class EasyApplyAgent(IJobApplicationAgent):
     def fill_form_node(self, state: EasyApplyState) -> Dict[str, Any]:
         """Fill the form using AI-generated answers based on CV analysis."""
         try:
+            driver = state["browser_manager"].driver
             cv_analysis = state["cv_analysis"]
             form_answers = {}
 
+            # Check for resume upload section first
+            try:
+                upload_spans = driver.find_elements(
+                    By.XPATH, "//span[contains(text(), 'Upload resume')]"
+                )
+                if upload_spans:
+                    # Skip resume upload by clicking next button
+                    next_button = driver.find_element(
+                        By.CSS_SELECTOR, "[data-easy-apply-next-button]"
+                    )
+                    if next_button:
+                        try:
+                            next_button.click()
+                        except Exception:
+                            driver.execute_script("arguments[0].click();", next_button)
+                        state["browser_manager"].random_delay(2, 3)
+                        return {
+                            **state,
+                            "form_answers": {"resume_upload": "skipped"},
+                            "current_step": "resume_upload_skipped",
+                        }
+            except:
+                pass
+
+            # Fill basic personal information fields directly
+            personal_fields = {
+                "first name": (
+                    cv_analysis.get("name", "").split()[0]
+                    if cv_analysis.get("name")
+                    else ""
+                ),
+                "last name": (
+                    " ".join(cv_analysis.get("name", "").split()[1:])
+                    if cv_analysis.get("name")
+                    and len(cv_analysis.get("name", "").split()) > 1
+                    else ""
+                ),
+                "mobile phone number": cv_analysis.get("phone", ""),
+                "phone country code": (
+                    cv_analysis.get("phone", "").split()[0]
+                    if cv_analysis.get("phone")
+                    else ""
+                ),
+                "email address": cv_analysis.get("email", ""),
+            }
+
+            # Fill input fields for personal info
+            input_fields = driver.find_elements(
+                By.CSS_SELECTOR,
+                "input[type='text'], input[type='email'], input[type='tel']",
+            )
+            for field in input_fields:
+                try:
+                    # Skip if field is already filled (LinkedIn autocomplete)
+                    if field.get_attribute("value"):
+                        continue
+
+                    field_id = field.get_attribute("id") or ""
+                    field_name = field.get_attribute("name") or ""
+                    field_label = self._get_field_label(driver, field).lower()
+
+                    # Match field to personal info
+                    for field_type, value in personal_fields.items():
+                        if value and (
+                            field_type in field_label
+                            or field_type in field_id.lower()
+                            or field_type in field_name.lower()
+                        ):
+                            state["browser_manager"].human_type(field, value)
+                            form_answers[field_type] = value
+                            state["browser_manager"].random_delay(0.5, 1)
+                            break
+                except Exception as e:
+                    continue
+
+            # Process remaining complex questions with AI
             for question_data in state["form_questions"]:
                 question = question_data["question"]
                 question_type = question_data["type"]
@@ -281,16 +368,52 @@ class EasyApplyAgent(IJobApplicationAgent):
                 try:
                     # Get AI-generated answer
                     chain = self.form_prompt | self.model
+                    # Extract data from CV structure
+                    skills = ", ".join(
+                        [
+                            skill.get("title", "")
+                            for skill in cv_analysis.get("skills", [])
+                        ]
+                    )
+                    education = ", ".join(
+                        [
+                            f"{edu.get('title', '')} at {edu.get('institution', '')}"
+                            for edu in cv_analysis.get("education", [])
+                        ]
+                    )
+                    certifications = ", ".join(
+                        [
+                            cert.get("title", "")
+                            for cert in cv_analysis.get("certifications", [])
+                        ]
+                    )
+                    work_experience = cv_analysis.get("work_experience", [])
+                    previous_roles = ", ".join(
+                        [exp.get("title", "") for exp in work_experience]
+                    )
+                    technologies = ", ".join(
+                        [
+                            tech
+                            for exp in work_experience
+                            for tech in exp.get("stack", [])
+                        ]
+                    )
+
                     response = chain.invoke(
                         {
-                            "skills": ", ".join(cv_analysis["skills"]),
-                            "experience_years": cv_analysis["experience_years"],
-                            "previous_roles": ", ".join(cv_analysis["previous_roles"]),
-                            "education": ", ".join(cv_analysis["education"]),
-                            "certifications": ", ".join(cv_analysis["certifications"]),
-                            "technologies": ", ".join(cv_analysis["technologies"]),
+                            "skills": skills,
+                            "experience_years": cv_analysis.get(
+                                "experience_years", "2"
+                            ),
+                            "previous_roles": previous_roles,
+                            "education": education,
+                            "certifications": certifications,
+                            "technologies": technologies,
                             "key_achievements": ", ".join(
-                                cv_analysis["key_achievements"]
+                                [
+                                    exp.get("description", "")
+                                    for exp in work_experience[:2]
+                                ]
                             ),
                             "monthly_salary": state["monthly_salary"],
                             "question": question,
@@ -520,6 +643,42 @@ class EasyApplyAgent(IJobApplicationAgent):
         # Fallback to first option if no match
         return options[0] if options else ""
 
+    def has_next_step_or_submit(self, state: EasyApplyState) -> str:
+        """Check if there's a Next button or Submit button to determine next action."""
+        driver = state["browser_manager"].driver
+
+        # Look for Next button first
+        next_selectors = [
+            'button[aria-label*="next" i]',
+            "button[data-easy-apply-next-button]",
+            'button:contains("Next")',
+            'button[type="button"]:has-text("Next")',
+            'button[class*="next"]',
+        ]
+
+        for selector in next_selectors:
+            try:
+                next_button = driver.find_element(
+                    By.CSS_SELECTOR,
+                    selector.replace(":contains", ":has-text").replace(":has-text", ""),
+                )
+                if next_button and next_button.is_enabled():
+                    # Click the next button with human-like interaction
+                    try:
+                        state["browser_manager"].human_click(next_button)
+                    except Exception:
+                        driver.execute_script("arguments[0].click();", next_button)
+
+                    # Add random behavior after clicking next
+                    state["browser_manager"].random_mouse_movement()
+                    state["browser_manager"].random_delay(2, 3)
+                    return "next"
+            except:
+                continue
+
+        # If no Next button found, assume we're ready to submit
+        return "submit"
+
     @trace_mcp_operation("apply_to_job")
     def apply_to_job(
         self,
@@ -556,7 +715,7 @@ class EasyApplyAgent(IJobApplicationAgent):
 
         initial_state = EasyApplyState(
             job_id=job_id,
-            monthly_salary=application_request.monthly_salary,
+            monthly_salary=application_request["monthly_salary"],
             cv_analysis=cv_analysis,
             browser_manager=browser_manager,
             current_step="starting",
